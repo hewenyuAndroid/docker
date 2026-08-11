@@ -112,8 +112,6 @@ EOF
 sudo apt update
 ```
 
-
-
 #### 1.3.2.1、检查 `Docker`  的 `apt` 源，如果存在旧的官方源需要删除
 
 上述命令执行完成后，可以查看下当前系统的源配置文件
@@ -127,15 +125,11 @@ hewenyu@hewenyu:/etc/apt/keyrings$ ls -la /etc/apt/sources.list.d/ | grep -i doc
 -rw-r--r-- 1 root root  161 Aug 11 16:24 docker.sources
 ```
 
-
-
 如果存在旧的官方源，应当删除 ，如果还有其他文件（如 `docker-ce.list`），一并删除
 
 ```shell
 sudo rm -f /etc/apt/sources.list.d/docker.list
 ```
-
-
 
 删除后需要重新刷新 `apt` 索引
 
@@ -151,8 +145,6 @@ Hit:3 http://security.ubuntu.com/ubuntu noble-security InRelease
 Hit:4 http://archive.ubuntu.com/ubuntu noble-updates InRelease
 Hit:5 http://archive.ubuntu.com/ubuntu noble-backports InRelease
 ```
-
-
 
 如果不删除旧的官方索引，下载的时候还是会从官方的地址下载:
 
@@ -192,17 +184,11 @@ Ign:6 https://download.docker.com/linux/ubuntu noble/stable amd64 docker-ce-root
 ...
 ```
 
-
-
 ### 1.3.3、安装 `Docker` 引擎 (最新版本)
-
-
 
 ```shell
 sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 ```
-
-
 
 | **包名**                | **作用**                                        |
 | :---------------------- | :---------------------------------------------- |
@@ -213,14 +199,14 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
 | `docker-compose-plugin` | Docker Compose V2 插件（`docker compose` 命令） |
 
 
-
 ### 1.3.4、安装 `Docker` 引擎 (指定版本)
-
 
 
 > step1: 列出仓库中所有的可用版本
 
 ```shell
+apt list --all-versions docker-ce
+
 hewenyu@hewenyu:/mnt/c/Users/he875$ apt list --all-versions docker-ce
 Listing... Done
 docker-ce/noble 5:29.7.2-1~ubuntu.24.04~noble amd64
@@ -295,30 +281,119 @@ docker-ce/noble 5:26.0.1-1~ubuntu.24.04~noble amd64
 docker-ce/noble 5:26.0.0-1~ubuntu.24.04~noble amd64
 ```
 
-
-
 > step2: 选中版本号，使用 `=` 精确指定
-
-
 
 ```shell
 VERSION_STRING=5:29.1.0-1~ubuntu.24.04~noble
 sudo apt install docker-ce=$VERSION_STRING docker-ce-cli=$VERSION_STRING containerd.io docker-buildx-plugin docker-compose-plugin
 ```
 
-
-
 注意两个关键点：
 
 - **`docker-ce` 和 `docker-ce-cli` 必须指定同一个版本号**（用 `$VERSION_STRING` 变量保证一致）
 - **版本号字符串必须原样复制** `apt list` 输出里的第二列，包括前面的 `5:` epoch 号和后面的 `~ubuntu.24.04~noble` 后缀，少一个字符都会报 `E: Version '...' for 'docker-ce' was not found`
 
-
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ VERSION_STRING=5:29.1.0-1~ubuntu.24.04~noble
+hewenyu@hewenyu:/mnt/c/Users/he875$ sudo apt install docker-ce=$VERSION_STRING docker-ce-cli=$VERSION_STRING containerd.io docker-buildx-plugin docker-compose-plugin
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+The following additional packages will be installed:
+  docker-ce-rootless-extras iptables libip6tc2 libnetfilter-conntrack3 libnfnetlink0 libnftables1 libnftnl11 nftables
+  pigz
+Suggested packages:
+  cgroupfs-mount | cgroup-lite docker-model-plugin firewalld
+The following NEW packages will be installed:
+  containerd.io docker-buildx-plugin docker-ce docker-ce-cli docker-ce-rootless-extras docker-compose-plugin iptables
+  libip6tc2 libnetfilter-conntrack3 libnfnetlink0 libnftables1 libnftnl11 nftables pigz
+0 upgraded, 14 newly installed, 0 to remove and 81 not upgraded.
+Need to get 37.3 MB/99.5 MB of archives.
+After this operation, 383 MB of additional disk space will be used.
+Do you want to continue? [Y/n] y
+Get:1 https://mirrors.aliyun.com/docker-ce/linux/ubuntu noble/stable amd64 docker-ce-cli amd64 5:29.1.0-1~ubuntu.24.04~noble [16.3 MB]
+Get:2 https://mirrors.aliyun.com/docker-ce/linux/ubuntu noble/stable amd64 docker-ce amd64 5:29.1.0-1~ubuntu.24.04~noble [21.1 MB]
+Fetched 37.3 MB in 26s (1454 kB/s)
+Selecting previously unselected package containerd.io.
+(Reading database ... 50824 files and directories currently installed.)
+Preparing to unpack .../00-containerd.io_2.3.3-1~ubuntu.24.04~noble_amd64.deb ...
+Unpacking containerd.io (2.3.3-1~ubuntu.24.04~noble) ...
+Selecting previously unselected package docker-ce-cli.
+Preparing to unpack .../01-docker-ce-cli_5%3a29.1.0-1~ubuntu.24.04~noble_amd64.deb ...
+Unpacking docker-ce-cli (5:29.1.0-1~ubuntu.24.04~noble) ...
+Selecting previously unselected package libip6tc2:amd64.
+Preparing to unpack .../02-libip6tc2_1.8.10-3ubuntu2_amd64.deb ...
+Unpacking libip6tc2:amd64 (1.8.10-3ubuntu2) ...
+Selecting previously unselected package libnfnetlink0:amd64.
+Preparing to unpack .../03-libnfnetlink0_1.0.2-2build1_amd64.deb ...
+Unpacking libnfnetlink0:amd64 (1.0.2-2build1) ...
+Selecting previously unselected package libnetfilter-conntrack3:amd64.
+Preparing to unpack .../04-libnetfilter-conntrack3_1.0.9-6build1_amd64.deb ...
+Unpacking libnetfilter-conntrack3:amd64 (1.0.9-6build1) ...
+Selecting previously unselected package libnftnl11:amd64.
+Preparing to unpack .../05-libnftnl11_1.2.6-2build1_amd64.deb ...
+Unpacking libnftnl11:amd64 (1.2.6-2build1) ...
+Selecting previously unselected package iptables.
+Preparing to unpack .../06-iptables_1.8.10-3ubuntu2_amd64.deb ...
+Unpacking iptables (1.8.10-3ubuntu2) ...
+Selecting previously unselected package libnftables1:amd64.
+Preparing to unpack .../07-libnftables1_1.0.9-1ubuntu0.1_amd64.deb ...
+Unpacking libnftables1:amd64 (1.0.9-1ubuntu0.1) ...
+Selecting previously unselected package nftables.
+Preparing to unpack .../08-nftables_1.0.9-1ubuntu0.1_amd64.deb ...
+Unpacking nftables (1.0.9-1ubuntu0.1) ...
+Selecting previously unselected package docker-ce.
+Preparing to unpack .../09-docker-ce_5%3a29.1.0-1~ubuntu.24.04~noble_amd64.deb ...
+Unpacking docker-ce (5:29.1.0-1~ubuntu.24.04~noble) ...
+Selecting previously unselected package pigz.
+Preparing to unpack .../10-pigz_2.8-1_amd64.deb ...
+Unpacking pigz (2.8-1) ...
+Selecting previously unselected package docker-buildx-plugin.
+Preparing to unpack .../11-docker-buildx-plugin_0.36.1-1~ubuntu.24.04~noble_amd64.deb ...
+Unpacking docker-buildx-plugin (0.36.1-1~ubuntu.24.04~noble) ...
+Selecting previously unselected package docker-ce-rootless-extras.
+Preparing to unpack .../12-docker-ce-rootless-extras_5%3a29.7.2-1~ubuntu.24.04~noble_amd64.deb ...
+Unpacking docker-ce-rootless-extras (5:29.7.2-1~ubuntu.24.04~noble) ...
+Selecting previously unselected package docker-compose-plugin.
+Preparing to unpack .../13-docker-compose-plugin_5.4.0-1~ubuntu.24.04~noble_amd64.deb ...
+Unpacking docker-compose-plugin (5.4.0-1~ubuntu.24.04~noble) ...
+Setting up libip6tc2:amd64 (1.8.10-3ubuntu2) ...
+Setting up libnftnl11:amd64 (1.2.6-2build1) ...
+Setting up docker-buildx-plugin (0.36.1-1~ubuntu.24.04~noble) ...
+Setting up containerd.io (2.3.3-1~ubuntu.24.04~noble) ...
+Created symlink /etc/systemd/system/multi-user.target.wants/containerd.service → /usr/lib/systemd/system/containerd.service.
+Setting up docker-compose-plugin (5.4.0-1~ubuntu.24.04~noble) ...
+Setting up docker-ce-cli (5:29.1.0-1~ubuntu.24.04~noble) ...
+Setting up pigz (2.8-1) ...
+Setting up libnfnetlink0:amd64 (1.0.2-2build1) ...
+Setting up docker-ce-rootless-extras (5:29.7.2-1~ubuntu.24.04~noble) ...
+Setting up libnftables1:amd64 (1.0.9-1ubuntu0.1) ...
+Setting up nftables (1.0.9-1ubuntu0.1) ...
+Setting up libnetfilter-conntrack3:amd64 (1.0.9-6build1) ...
+Setting up iptables (1.8.10-3ubuntu2) ...
+update-alternatives: using /usr/sbin/iptables-legacy to provide /usr/sbin/iptables (iptables) in auto mode
+update-alternatives: using /usr/sbin/ip6tables-legacy to provide /usr/sbin/ip6tables (ip6tables) in auto mode
+update-alternatives: using /usr/sbin/iptables-nft to provide /usr/sbin/iptables (iptables) in auto mode
+update-alternatives: using /usr/sbin/ip6tables-nft to provide /usr/sbin/ip6tables (ip6tables) in auto mode
+update-alternatives: using /usr/sbin/arptables-nft to provide /usr/sbin/arptables (arptables) in auto mode
+update-alternatives: using /usr/sbin/ebtables-nft to provide /usr/sbin/ebtables (ebtables) in auto mode
+Setting up docker-ce (5:29.1.0-1~ubuntu.24.04~noble) ...
+Created symlink /etc/systemd/system/multi-user.target.wants/docker.service → /usr/lib/systemd/system/docker.service.
+Created symlink /etc/systemd/system/sockets.target.wants/docker.socket → /usr/lib/systemd/system/docker.socket.
+Processing triggers for man-db (2.12.0-4build2) ...
+Processing triggers for libc-bin (2.39-0ubuntu8.8) ...
+/sbin/ldconfig.real: /usr/lib/wsl/lib/libcuda.so.1 is not a symbolic link
+```
 
 > step3: 锁定版本，防止意外升级 (生产环境推荐)
 
 ```shell
 sudo apt-mark hold docker-ce docker-ce-cli containerd.io
+
+hewenyu@hewenyu:/mnt/c/Users/he875$ sudo apt-mark hold docker-ce docker-ce-cli containerd.io
+docker-ce set on hold.
+docker-ce-cli set on hold.
+containerd.io set on hold.
 ```
 
 这样以后执行 `sudo apt upgrade` 时，Docker 这几个包会被跳过，不会自动升到新版本。需要时解除锁定：
@@ -493,7 +568,7 @@ Run 'docker run --help' for more information
 
 
 
-配置公共镜像加速器
+> 配置公共镜像加速器
 
 ```shell
 # 配置公共的镜像加速器
