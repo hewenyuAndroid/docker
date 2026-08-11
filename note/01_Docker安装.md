@@ -555,6 +555,223 @@ For more examples and ideas, visit:
 
 
 
+# 2、`Docker` 卸载
+
+
+
+## 2.1、停止 `Docker` 服务
+
+```shell
+# 1. 停止服务（WSL 环境用 service）
+sudo service docker stop
+```
+
+
+
+命令执行结果如下:
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ sudo service docker stop
+[sudo] password for hewenyu:
+Stopping 'docker.service', but its triggering units are still active:
+docker.socket
+```
+
+原因在于 **Docker 守护进程是通过 socket 激活（socket activation）方式启动的**。即使你用 `service docker stop` 停止了 `docker.service`，`docker.socket` 单元仍然在监听，一旦有客户端连接（比如 `docker` 命令），就会自动唤醒服务。
+
+
+
+### 2.1.1、使用 systemctl 停止 socket (彻底停止 `Docker` 服务)
+
+```shell
+# 停止 socket 单元
+sudo systemctl stop docker.socket
+
+# 确认 socket 已停止
+sudo systemctl status docker.socket
+
+# 然后停止 docker 服务（此时应该不会再有触发单元提示）
+sudo service docker stop
+```
+
+执行结果:
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ sudo systemctl stop docker.socket
+hewenyu@hewenyu:/mnt/c/Users/he875$ sudo systemctl status docker.socket
+○ docker.socket - Docker Socket for the API
+     Loaded: loaded (/usr/lib/systemd/system/docker.socket; enabled; preset: enabled)
+     Active: inactive (dead) since Tue 2026-08-11 17:52:16 CST; 8s ago
+   Duration: 1h 20min 953ms
+   Triggers: ● docker.service
+     Listen: /run/docker.sock (Stream)
+        CPU: 1ms
+
+Aug 11 16:32:15 hewenyu systemd[1]: Starting docker.socket - Docker Socket for the API...
+Aug 11 16:32:15 hewenyu systemd[1]: Listening on docker.socket - Docker Socket for the API.
+Aug 11 17:52:16 hewenyu systemd[1]: docker.socket: Deactivated successfully.
+Aug 11 17:52:16 hewenyu systemd[1]: Closed docker.socket - Docker Socket for the API.
+hewenyu@hewenyu:/mnt/c/Users/he875$ sudo service docker stop
+```
+
+
+
+## 2.2、卸载软件包
+
+
+
+```shell
+sudo apt-get purge -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin docker-ce-rootless-extras
+
+hewenyu@hewenyu:/mnt/c/Users/he875$ sudo apt-get purge -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin docker-ce-rootless-extras
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+The following packages were automatically installed and are no longer required:
+  iptables libip6tc2 libnetfilter-conntrack3 libnfnetlink0 libnftables1 libnftnl11 nftables pigz
+Use 'sudo apt autoremove' to remove them.
+The following packages will be REMOVED:
+  containerd.io* docker-buildx-plugin* docker-ce* docker-ce-cli* docker-ce-rootless-extras* docker-compose-plugin*
+0 upgraded, 0 newly installed, 6 to remove and 81 not upgraded.
+After this operation, 395 MB disk space will be freed.
+(Reading database ... 51329 files and directories currently installed.)
+Removing docker-ce (5:29.7.2-1~ubuntu.24.04~noble) ...
+Removing containerd.io (2.3.3-1~ubuntu.24.04~noble) ...
+Removing docker-buildx-plugin (0.36.1-1~ubuntu.24.04~noble) ...
+Removing docker-ce-cli (5:29.7.2-1~ubuntu.24.04~noble) ...
+Removing docker-ce-rootless-extras (5:29.7.2-1~ubuntu.24.04~noble) ...
+Removing docker-compose-plugin (5.4.0-1~ubuntu.24.04~noble) ...
+Processing triggers for man-db (2.12.0-4build2) ...
+(Reading database ... 51105 files and directories currently installed.)
+Purging configuration files for docker-ce (5:29.7.2-1~ubuntu.24.04~noble) ...
+dpkg: warning: while removing docker-ce, directory '/etc/docker' not empty so not removed
+Purging configuration files for containerd.io (2.3.3-1~ubuntu.24.04~noble) ...
+```
+
+
+
+## 2.3、清理依赖
+
+
+
+```shell
+sudo apt-get autoremove -y --purge
+
+hewenyu@hewenyu:/mnt/c/Users/he875$ sudo apt-get autoremove -y --purge
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+The following packages will be REMOVED:
+  iptables* libip6tc2* libnetfilter-conntrack3* libnfnetlink0* libnftables1* libnftnl11* nftables* pigz*
+0 upgraded, 0 newly installed, 8 to remove and 81 not upgraded.
+After this operation, 4362 kB disk space will be freed.
+(Reading database ... 51100 files and directories currently installed.)
+Removing iptables (1.8.10-3ubuntu2) ...
+Removing libip6tc2:amd64 (1.8.10-3ubuntu2) ...
+Removing libnetfilter-conntrack3:amd64 (1.0.9-6build1) ...
+Removing libnfnetlink0:amd64 (1.0.2-2build1) ...
+Removing nftables (1.0.9-1ubuntu0.1) ...
+Removing libnftables1:amd64 (1.0.9-1ubuntu0.1) ...
+Removing libnftnl11:amd64 (1.2.6-2build1) ...
+Removing pigz (2.8-1) ...
+Processing triggers for man-db (2.12.0-4build2) ...
+Processing triggers for libc-bin (2.39-0ubuntu8.8) ...
+/sbin/ldconfig.real: /usr/lib/wsl/lib/libcuda.so.1 is not a symbolic link
+
+(Reading database ... 50825 files and directories currently installed.)
+Purging configuration files for nftables (1.0.9-1ubuntu0.1) ...
+```
+
+
+
+## 2.4、删除数据目录（会丢失所有容器和镜像）
+
+
+
+```shell
+sudo rm -rf /var/lib/docker
+sudo rm -rf /var/lib/containerd
+
+hewenyu@hewenyu:/mnt/c/Users/he875$ sudo rm -rf /var/lib/docker
+hewenyu@hewenyu:/mnt/c/Users/he875$ sudo rm -rf /var/lib/containerd
+```
+
+
+
+## 2.5、删除 apt 源和密钥
+
+
+
+```shell
+sudo rm -f /etc/apt/sources.list.d/docker.sources
+sudo rm -f /etc/apt/sources.list.d/docker.list
+sudo rm -f /etc/apt/keyrings/docker.asc
+
+hewenyu@hewenyu:/mnt/c/Users/he875$ sudo rm -f /etc/apt/sources.list.d/docker.sources
+hewenyu@hewenyu:/mnt/c/Users/he875$ sudo rm -f /etc/apt/sources.list.d/docker.list
+hewenyu@hewenyu:/mnt/c/Users/he875$ sudo rm -f /etc/apt/keyrings/docker.asc
+```
+
+
+
+## 2.6、删除配置目录和用户级配置
+
+
+
+```shell
+sudo rm -rf /etc/docker
+rm -rf ~/.docker
+
+hewenyu@hewenyu:/mnt/c/Users/he875$ sudo rm -rf /etc/docker
+hewenyu@hewenyu:/mnt/c/Users/he875$ rm -rf ~/.docker
+```
+
+
+
+## 2.7、删除 docker 用户组（如果不再使用）
+
+```shell
+sudo groupdel docker 2>/dev/null
+
+hewenyu@hewenyu:/mnt/c/Users/he875$ sudo groupdel docker 2>/dev/null
+```
+
+
+
+## 2.8、验证是否卸载干净
+
+
+
+```shell
+which docker
+docker --version
+dpkg -l | grep -i docker
+ls /var/lib/docker 2>/dev/null
+
+hewenyu@hewenyu:/mnt/c/Users/he875$ which docker
+hewenyu@hewenyu:/mnt/c/Users/he875$
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker --version
+-bash: /usr/bin/docker: No such file or directory
+hewenyu@hewenyu:/mnt/c/Users/he875$
+hewenyu@hewenyu:/mnt/c/Users/he875$ dpkg -l | grep -i docker
+hewenyu@hewenyu:/mnt/c/Users/he875$
+hewenyu@hewenyu:/mnt/c/Users/he875$ ls /var/lib/docker 2>/dev/null
+```
+
+
+
+`which docker` 和 `docker --version` 应返回 `"command not found"` // 实际有差异
+
+`dpkg -l | grep -i docker` 应为空
+
+`/var/lib/docker` 应不存在
+
+
+
+
+
+
+
 
 
 
