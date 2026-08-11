@@ -475,7 +475,7 @@ hewenyu@hewenyu:/mnt/c/Users/he875$ sudo docker info | grep -A 1 "Registry Mirro
 
 
 
-### 1.3.7、配置容器镜像拉取为公网地址 （非阿里云上的虚拟机可用）
+### 1.3.8、配置容器镜像拉取为公网地址 （非阿里云上的虚拟机可用）
 
 
 
@@ -524,7 +524,7 @@ hewenyu@hewenyu:/mnt/c/Users/he875$ sudo docker info | grep -A 3 "Registry Mirro
 
 
 
-### 1.3.8、运行 `hello-world` 镜像
+### 1.3.9、运行 `hello-world` 镜像
 
 
 
