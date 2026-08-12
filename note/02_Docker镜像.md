@@ -50,15 +50,41 @@
 
 `docker pull` 是 `Docker` 客户端用于从镜像仓库（默认 `Docker Hub`）下载镜像到本地的核心命令。
 
-## 2.1.1、`docker pull` 基本语法
+`docker pull` 根据镜像名称，从远程 `Registry` 找到指定的镜像，并将本地缺失的镜像数据（`Layers` 等）下载到 `Docker Engine` 的本地镜像存储中。它不是简单地下载一个 `.tar` 文件，而是根据镜像的 `Manifest` 找到组成 `Image` 所需要的多个 `Layer`，然后下载这些 `Layer`。
+
+### 2.1.1、`docker pull` 基本语法
 
 ```shell
 docker pull [OPTIONS] NAME[:TAG|@DIGEST]
+
+# 完整写法
+docker pull docker.io/library/redis:7.4
+
+# 拆解下命令
+docker pull [OPTIONS] NAME       :TAG
+                         │        │
+                         │        └── 7.4
+                         │
+                         └── docker.io/library/redis
+
+
+# 简写， 默认的 register是 docker.io ，默认的 namespace 是 library
+docker pull redis:7.4
 ```
 
-- `NAME`：镜像名称，如 `nginx`、`ubuntu`。
+- `NAME`：镜像名称。
 - `TAG`：标签，默认为 `latest`。例如 `nginx:1.25`。
 - `@DIGEST`：通过内容哈希值精确指定镜像版本，如 `nginx@sha256:xxx`。
+
+
+> 一个完整的 `NAME` 由 `Registry`、`NameSpace`、`Respository` 组成：
+
+- `Registry`: `Docker` 的镜像中心，类似于 `github`，默认为 `docker.io`;
+- `NameSpace`: 镜像中心的组织名称，用于解决不同组织之间的 `Respository` 冲突问题，默认为 `library`;
+- `Respository`: 镜像仓库，类似于 `maven` 仓库 `gav` 中的 `ga`，表示一个库，这个库可以有很多版本，版本就是 `tag`;
+
+`docker` 镜像中的 `tag` 并不是指向一个完整的 `image` 镜像，`docker` 中的 `image` 镜像按照 `layer` 拆解成多个文件，不同版本可以复用相同的 `layer`，因此 `tag` 指向的是一个 `manifest` 清单文件，这个文件列出了对应 `tag` 版本所需要的 `layer` 文件列表;
+
 
 > OPTIONS 选项
 
@@ -68,3 +94,70 @@ docker pull [OPTIONS] NAME[:TAG|@DIGEST]
 | `--disable-content-trust` | 跳过镜像签名验证（默认启用）                       |
 | `--platform`              | 指定目标操作系统/架构，如 linux/amd64, linux/arm64 |
 | `-q, --quiet`             | 只显示摘要信息，不输出进度条                       |
+
+> `docker pull` 命令流程拆解
+
+```txt
+docker pull [OPTIONS] NAME[:TAG|@DIGEST]
+                         │
+                         ▼
+                       NAME
+                         │
+              ┌──────────┼──────────┐
+              ▼          ▼          ▼
+           Registry   Namespace  Repository
+              │          │          │
+           docker.io   library     redis
+                                      │
+                              ┌───────┴───────┐
+                              ▼               ▼
+                            :TAG          @DIGEST
+                             7.4          sha256:...
+                              │               │
+                              └───────┬───────┘
+                                      ▼
+                                  Manifest
+                                      │
+                                    Layers
+                                      │
+                                      ▼
+                                    Image
+```
+
+### 2.1.2、拉取 `redis`
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ sudo docker pull redis
+[sudo] password for hewenyu:
+Using default tag: latest
+latest: Pulling from library/redis
+910e63375a2f: Download complete
+514dfa5816db: Pull complete
+a326415e779c: Pull complete
+26c307b5e35a: Pull complete
+4f4fb700ef54: Pull complete
+dbfb374a7f58: Pull complete
+65405b53eed3: Pull complete
+80c4a8d1ffc0: Pull complete
+8e9e522279cf: Download complete
+Digest: sha256:344e3945a0b431c8ff1eecd58c5573538126bd756f02fc7e218ddf1fc2546366
+Status: Downloaded newer image for redis:latest
+docker.io/library/redis:latest
+```
+
+> 查看本地镜像
+
+```shell
+# docker images 查看本地镜像
+hewenyu@hewenyu:/mnt/c/Users/he875$ sudo docker images
+                                                                                                    i Info →   U  In Use
+IMAGE                ID             DISK USAGE   CONTENT SIZE   EXTRA
+hello-world:latest   7f4da0fc94bc       25.9kB         9.49kB    U
+redis:latest         344e3945a0b4        212MB         57.4MB
+# docker image ls 查看本地镜像
+hewenyu@hewenyu:/mnt/c/Users/he875$ sudo docker image ls
+                                                                                                    i Info →   U  In Use
+IMAGE                ID             DISK USAGE   CONTENT SIZE   EXTRA
+hello-world:latest   7f4da0fc94bc       25.9kB         9.49kB    U
+redis:latest         344e3945a0b4        212MB         57.4MB
+```
