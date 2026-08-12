@@ -85,6 +85,9 @@ docker pull redis:7.4
 
 `docker` 镜像中的 `tag` 并不是指向一个完整的 `image` 镜像，`docker` 中的 `image` 镜像按照 `layer` 拆解成多个文件，不同版本可以复用相同的 `layer`，因此 `tag` 指向的是一个 `manifest` 清单文件，这个文件列出了对应 `tag` 版本所需要的 `layer` 文件列表;
 
+例如: 下载指定版本的 redis 时，如果本地已经下载过其它版本，当前需要下载的目标版本的部分 `layer` 在本地已经存在时，无需重复下载
+
+![redis layer跳过下载](../imgs/docker_pull_redis_layer_repeat.png)
 
 > OPTIONS 选项
 
@@ -145,7 +148,9 @@ Status: Downloaded newer image for redis:latest
 docker.io/library/redis:latest
 ```
 
-> 查看本地镜像
+## 2.2、`docker images` 或 `docker image ls`
+
+通过 `docker images` 或 `docker image ls` 命令可查看本地所有镜像资源信息。这些镜像会按照镜像被创建的时间由近及远排序。
 
 ```shell
 # docker images 查看本地镜像
@@ -160,4 +165,242 @@ hewenyu@hewenyu:/mnt/c/Users/he875$ sudo docker image ls
 IMAGE                ID             DISK USAGE   CONTENT SIZE   EXTRA
 hello-world:latest   7f4da0fc94bc       25.9kB         9.49kB    U
 redis:latest         344e3945a0b4        212MB         57.4MB
+```
+
+> 查看指定 `repository` 的镜像  `docker images redis`
+
+```shell
+hewenyu@hewenyu:/etc/docker$ sudo docker images redis
+                                                                                                    i Info →   U  In Use
+IMAGE          ID             DISK USAGE   CONTENT SIZE   EXTRA
+redis:latest   344e3945a0b4        212MB         57.4MB
+hewenyu@hewenyu:/etc/docker$ sudo docker image ls redis
+                                                                                                    i Info →   U  In Use
+IMAGE          ID             DISK USAGE   CONTENT SIZE   EXTRA
+redis:latest   344e3945a0b4        212MB         57.4MB
+```
+
+> 查看镜像，并显示完整的镜像Id
+
+
+默认的 `docker images` 显示的镜像id是经过截取后的显示结果，仅显示了前12位。使用 `--no-trunc` 参数后显示的是完成的镜像 `id`。
+
+```shell
+hewenyu@hewenyu:/etc/docker$ sudo docker images --no-trunc
+[sudo] password for hewenyu:
+REPOSITORY    TAG       IMAGE ID                                                                  CREATED        SIZE
+redis         latest    sha256:344e3945a0b431c8ff1eecd58c5573538126bd756f02fc7e218ddf1fc2546366   7 days ago     212MB
+hello-world   latest    sha256:7f4da0fc94bcece205a8c0b6f4d11c8196924654ffe5c4d1aa439b7f632048b2   4 months ago   25.9kB
+```
+
+> 查看镜像，并显示 `degest`
+
+`--digests` 选项可以查看所有镜像或指定镜像的 `digest` 信息;
+
+```shell
+hewenyu@hewenyu:/etc/docker$ sudo docker images --digests
+REPOSITORY    TAG       DIGEST                                                                    IMAGE ID       CREATED        SIZE
+redis         latest    sha256:344e3945a0b431c8ff1eecd58c5573538126bd756f02fc7e218ddf1fc2546366   344e3945a0b4   7 days ago     212MB
+hello-world   la
+```
+
+> 仅显示镜像Id
+
+```shell
+hewenyu@hewenyu:/etc/docker$ sudo docker images -q
+344e3945a0b4
+7f4da0fc94bc
+hewenyu@hewenyu:/etc/docker$ sudo docker images redis -q
+344e3945a0b4
+hewenyu@hewenyu:/etc/docker$ sudo docker images redis -q --no-trunc
+sha256:344e3945a0b431c8ff1eecd58c5573538126bd756f02fc7e218ddf1fc2546366
+```
+
+
+## 2.3、`docker rmi`
+
+`rmi` (`remove images`), 该命令用于删除指定的本地镜像。镜像通过 `<repository>:<tag>` 指定。如果省略要删除镜像的`tag`，默认删除的是 `lastest` 版本。
+
+```shell
+hewenyu@hewenyu:/etc/docker$ sudo docker images
+                                                                                                    i Info →   U  In Use
+IMAGE                ID             DISK USAGE   CONTENT SIZE   EXTRA
+hello-world:latest   7f4da0fc94bc       25.9kB         9.49kB    U
+redis:7.0            352c1fdadc91        164MB         44.5MB
+redis:7.2            6461ca4ac0c5        169MB         45.6MB
+redis:latest         344e3945a0b4        212MB         57.4MB
+
+# 删除redis镜像
+hewenyu@hewenyu:/etc/docker$ sudo docker rmi redis:7.0
+Untagged: redis:7.0
+Deleted: sha256:352c1fdadc91926edda08f45aeb3f27f37194c2f14101229c0523a11195c96e3
+
+hewenyu@hewenyu:/etc/docker$ sudo docker images
+                                                                                                    i Info →   U  In Use
+IMAGE                ID             DISK USAGE   CONTENT SIZE   EXTRA
+hello-world:latest   7f4da0fc94bc       25.9kB         9.49kB    U
+redis:7.2            6461ca4ac0c5        169MB         45.6MB
+redis:latest         344e3945a0b4        212MB         57.4MB
+
+# ====================
+
+# docker rmi 可以一次删除多个镜像
+hewenyu@hewenyu:/etc/docker$ sudo docker rmi redis:7.2 redis:latest
+Untagged: redis:7.2
+Deleted: sha256:6461ca4ac0c5c9d81d53685c3bf76aa81f464a9de6cf3a97b80a1da8d1bb1de4
+Untagged: redis:latest
+Deleted: sha256:344e3945a0b431c8ff1eecd58c5573538126bd756f02fc7e218ddf1fc2546366
+
+hewenyu@hewenyu:/etc/docker$ sudo docker images
+                                                                                                    i Info →   U  In Use
+IMAGE                ID             DISK USAGE   CONTENT SIZE   EXTRA
+hello-world:latest   7f4da0fc94bc       25.9kB         9.49kB    U
+
+# ==================================
+
+
+hewenyu@hewenyu:/etc/docker$ sudo docker images
+                                                                                                    i Info →   U  In Use
+IMAGE                ID             DISK USAGE   CONTENT SIZE   EXTRA
+hello-world:latest   7f4da0fc94bc       25.9kB         9.49kB    U
+redis:7.0            352c1fdadc91        164MB         44.5MB
+
+# 根据 ImageId 删除镜像
+hewenyu@hewenyu:/etc/docker$ sudo docker rmi 352c1fdadc91
+Untagged: redis:7.0
+Deleted: sha256:352c1fdadc91926edda08f45aeb3f27f37194c2f14101229c0523a11195c96e3
+
+hewenyu@hewenyu:/etc/docker$ sudo docker images
+                                                                                                    i Info →   U  In Use
+IMAGE                ID             DISK USAGE   CONTENT SIZE   EXTRA
+hello-world:latest   7f4da0fc94bc       25.9kB         9.49kB    U
+```
+
+### 2.3.1、强制删除镜像
+
+默认情况下，对于已经运行了容器的镜像是不能删除的，必须要先停止并删除了相关容器然后才能删除其对应的镜像。不过，也可以通过添加 `-f` 选项进行强制删除。
+
+```shell
+# 已经运行的镜像删除失败
+hewenyu@hewenyu:/etc/docker$ sudo docker rmi hello-world:latest
+Error response from daemon: conflict: unable to delete hello-world:latest (must be forced) - container 304ab9fac4c3 is using its referenced image 7f4da0fc94bc
+
+# 使用 -f 参数，强制删除
+hewenyu@hewenyu:/etc/docker$ sudo docker rmi -f hello-world:latest
+Untagged: hello-world:latest
+
+# 本地镜像空了
+hewenyu@hewenyu:/etc/docker$ sudo docker images
+                                                                                                    i Info →   U  In Use
+IMAGE   ID             DISK USAGE   CONTENT SIZE   EXTRA
+hewenyu@hewenyu:/etc/docker$
+```
+
+### 2.3.2、使用组合命令删除所有镜像
+
+使用组合命令删除所有镜像。当然，如果不携带 `-f` 选项，则不会删除已打开容器的镜像。 
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ sudo docker images
+                                                                                                    i Info →   U  In Use
+IMAGE                ID             DISK USAGE   CONTENT SIZE   EXTRA
+hello-world:latest   7f4da0fc94bc       25.9kB         9.49kB    U
+
+# 组合命令的方式，删除所有的镜像
+hewenyu@hewenyu:/mnt/c/Users/he875$ sudo docker rmi -f $(sudo docker images -q)
+Untagged: hello-world:latest
+Deleted: sha256:7f4da0fc94bcece205a8c0b6f4d11c8196924654ffe5c4d1aa439b7f632048b2
+
+hewenyu@hewenyu:/mnt/c/Users/he875$ sudo docker images
+                                                                                                    i Info →   U  In Use
+IMAGE   ID             DISK USAGE   CONTENT SIZE   EXTRA
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+## 2.4、镜像分层
+
+`Docker` 镜像由一些松耦合的只读镜像层组成，`Docker Daemon`负责堆叠这些镜像层，并将它们关联为一个统一的整体，即对外表现出的是一个独立的对象。 通过`docker pull` 命令拉取指定的镜像时，每个`Pull complete`结尾的行就代表下载完毕了一个镜像层。
+
+> redis 镜像拉取日志:
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ sudo docker pull redis
+[sudo] password for hewenyu:
+Using default tag: latest
+latest: Pulling from library/redis
+910e63375a2f: Download complete
+514dfa5816db: Pull complete
+a326415e779c: Pull complete
+26c307b5e35a: Pull complete
+4f4fb700ef54: Pull complete
+dbfb374a7f58: Pull complete
+65405b53eed3: Pull complete
+80c4a8d1ffc0: Pull complete
+8e9e522279cf: Download complete
+Digest: sha256:344e3945a0b431c8ff1eecd58c5573538126bd756f02fc7e218ddf1fc2546366
+Status: Downloaded newer image for redis:latest
+docker.io/library/redis:latest
+```
+
+
+每个镜像层由两部分构成：镜像文件系统与镜像json文件。这两部分具有相同的 `ImageID`。 镜像文件系统就是对镜像占有的磁盘空间进行管理的文件系统，拥有该镜像所有镜像层的数据内容。而镜像json文件则是用于描述镜像的相关属性的集合，通过 `docker inspect` [镜像]就可以直观看到。
+
+```shell
+# 查看镜像信息
+hewenyu@hewenyu:/mnt/c/Users/he875$ sudo docker inspect redis:7.2
+[
+    {
+        "Id": "sha256:6461ca4ac0c5c9d81d53685c3bf76aa81f464a9de6cf3a97b80a1da8d1bb1de4",
+        "RepoTags": [
+            "redis:7.2"
+        ],
+        "RepoDigests": [
+            "redis@sha256:6461ca4ac0c5c9d81d53685c3bf76aa81f464a9de6cf3a97b80a1da8d1bb1de4"
+        ],
+        "Comment": "buildkit.dockerfile.v0",
+        "Created": "2026-08-05T00:38:36.6618041Z",
+        "Config": {
+            "ExposedPorts": {
+                "6379/tcp": {}
+            },
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "REDIS_VERSION=7.2.15"
+            ],
+            "Entrypoint": [
+                "docker-entrypoint.sh"
+            ],
+            "Cmd": [
+                "redis-server"
+            ],
+            "Volumes": {
+                "/data": {}
+            },
+            "WorkingDir": "/data"
+        },
+        "Architecture": "amd64",
+        "Os": "linux",
+        "Size": 43203431,
+        "RootFS": {
+            "Type": "layers",
+            "Layers": [
+                "sha256:66462cc862fe2053b9863fefa3866e07bb5dfb06f6b3ce3177cc096e4021aabe",
+                "sha256:715096fa37288a0a05f6de361f2c05ba6c8fa141693d931f115f23563c4cc6a9",
+                "sha256:974e2922b0a254d3c6e220ec15aba4d00f6b44d9d58b480fc93cd07f7800af46",
+                "sha256:2b4806933d55d6a175b2e999bb9e636f0f4d9fab29025c1a49cb1c91e8ed0304",
+                "sha256:55bf745129300f9f6a1b5d39d2a52a18ee007ef8cd73623d7a7ef88bb5e25596",
+                "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+                "sha256:2874b7399b95c57eb89ec97af104d728c0636c251b9ce68aaf4522f5cbf4f250"
+            ]
+        },
+        "Metadata": {
+            "LastTagTime": "2026-08-12T13:17:24.971385897Z"
+        },
+        "Descriptor": {
+            "mediaType": "application/vnd.oci.image.index.v1+json",
+            "digest": "sha256:6461ca4ac0c5c9d81d53685c3bf76aa81f464a9de6cf3a97b80a1da8d1bb1de4",
+            "size": 10232
+        }
+    }
+]
 ```
