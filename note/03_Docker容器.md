@@ -270,7 +270,102 @@ hewenyu@hewenyu:/mnt/c/Users/he875$ docker run --name mytomcat3 -p 8083:8080 tom
 ### 1.5.4、分离了模式运行 `ubuntu`
 
 
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker images
+                                                                                                                 i Info →   U  In Use
+IMAGE           ID             DISK USAGE   CONTENT SIZE   EXTRA
+redis:7.2       6461ca4ac0c5        169MB         45.6MB
+tomcat:8.5.32   bbdb0de8298a        710MB          195MB    U
+ubuntu:latest   678c6550cc43        160MB         45.3MB    U
+# 分离模式，在后台启动 ubuntu:latest 镜像的容器
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker run -d ubuntu:latest
+839b43c3b8afad6838f832b1bba2fc73186b5174154465bcd87dc9c81958e254
+# 查看正在运行的容器，没有找到新创建的 ubuntu 容器
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+# docker ps -a 可以看到 ubuntu 的容器起来后退出了
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps -a
+CONTAINER ID   IMAGE           COMMAND             CREATED             STATUS                        PORTS     NAMES
+839b43c3b8af   ubuntu:latest   "/bin/bash"         7 seconds ago       Exited (0) 6 seconds ago                cranky_brattain
+fe991e4a5d35   ubuntu:latest   "/bin/bash"         55 seconds ago      Exited (0) 54 seconds ago               magical_maxwell
+a336afe7e4b3   tomcat:8.5.32   "catalina.sh run"   59 minutes ago      Exited (130) 58 minutes ago             mytomcat3
+5a9d06f00d94   tomcat:8.5.32   "catalina.sh run"   About an hour ago   Exited (143) 24 seconds ago             mytomcat2
+93251bcb87f3   tomcat:8.5.32   "catalina.sh run"   About an hour ago   Exited (143) 24 seconds ago             mytomcat1
+304ab9fac4c3   7f4da0fc94bc    "/hello"            2 days ago          Exited (0) 2 days ago                   exciting_banach
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
 
+`docker run -d ubuntu:latest` 命令启动容器会立刻变成 `Exited`​ 状态，原因：
 
+- `Ubuntu` 镜像默认命令是 `/bin/bash`。
+- `bash` 在后台模式下没有 `-it` 分配终端，启动后检测到没有输入，立即退出。
+- 容器主进程（`bash`）结束 → 容器停止。
 
+结论：要让 `Ubuntu` 容器在后台持续运行，必须给它一个永不退出的前台进程。
 
+解决方案：
+
+> 方案1：`tail -f /dev/null`（最推荐）
+
+`docker run -d --name myubuntu ubuntu tail -f /dev/null`
+
+- `tail -f /dev/null` 一直阻塞读取空文件，永不退出。
+- 容器保持 Up 状态。
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker run -d ubuntu tail -f /dev/null
+ac69a952042c318f39b573cf3453fb685a067ef5af73ce1d1a411c8f512d54ae
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE     COMMAND               CREATED         STATUS         PORTS     NAMES
+ac69a952042c   ubuntu    "tail -f /dev/null"   9 seconds ago   Up 8 seconds             distracted_gauss
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+> 方案2: `sleep infinity`,无限休眠，保持容器运行。
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker run --name u1 -d ubuntu:latest sleep infinity
+65e58075346ab8e5f8f2682b1896c445ee7df7c1af7917deba9c9a5d23367ec2
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND            CREATED         STATUS         PORTS     NAMES
+65e58075346a   ubuntu:latest   "sleep infinity"   5 seconds ago   Up 4 seconds             u1
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+> 方案3: bash -c "while true; do sleep 3600; done"
+
+死循环，每隔一小时醒来一次，永不停歇
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker run -d --name myubuntu ubuntu bash -c "while true; do sleep 3600; done"
+d6e80acab53caf74d7efa32adf75c042d00780e6146edefe0cee694d0fea0548
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND                  CREATED          STATUS          PORTS     NAMES
+d6e80acab53c   ubuntu          "bash -c 'while true…"   5 seconds ago    Up 5 seconds              myubuntu
+65e58075346a   ubuntu:latest   "sleep infinity"         18 minutes ago   Up 18 minutes             u1
+```
+
+### 1.5.5、进入后台运行的容器
+
+无论用哪种方法启动后台容器，进入方式相同:
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND                  CREATED          STATUS          PORTS     NAMES
+179d31a6e4b5   ubuntu:latest   "/bin/bash"              4 minutes ago    Up 4 minutes              ecstatic_bartik
+d6e80acab53c   ubuntu          "bash -c 'while true…"   5 minutes ago    Up 5 minutes              myubuntu
+65e58075346a   ubuntu:latest   "sleep infinity"         23 minutes ago   Up 23 minutes             u1
+# 进入运行的容器，传容器id的方式
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker exec -it 179d31a6e4b5 bash
+root@179d31a6e4b5:/# ls
+bin  boot  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+root@179d31a6e4b5:/#
+
+# 进入运行的容器，传容器名称的方式
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker exec -it myubuntu bash
+root@d6e80acab53c:/# ls
+bin  boot  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+root@d6e80acab53c:/#
+```
+
+进入运行的容器内部后，如果想停止容器运行可以使用 `docker stop 容器名称` 的方式。如果想退出容器但是保持容器运行，可以使用 `ctrl+p+q` (先按住 `ctrl+p` 然后按 `q`)的快捷键组合退出容器；
