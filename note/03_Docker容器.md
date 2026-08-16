@@ -479,7 +479,92 @@ CONTAINER ID   IMAGE           COMMAND       CREATED          STATUS          PO
 hewenyu@hewenyu:/mnt/c/Users/he875$
 ```
 
+## 1.6、容器状态查看命令
+
+> `docker ps` 查看所有正在运行的容器
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND       CREATED         STATUS         PORTS     NAMES
+4dc2f201c510   ubuntu:latest   "/bin/bash"   3 minutes ago   Up 3 minutes             u3
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+> `docker ps -a` 查看所有容器
+
+```shell
+# 可以看到，除了 u3 容器状态时 up，其它几个容器都是退出状态
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps -a
+CONTAINER ID   IMAGE           COMMAND               CREATED          STATUS                       PORTS     NAMES
+4dc2f201c510   ubuntu:latest   "/bin/bash"           4 minutes ago    Up 4 minutes                           u3
+81b034ab278c   ubuntu:latest   "tail -f /dev/null"   12 minutes ago   Exited (137) 8 minutes ago             u2
+37cc5800fa4c   tomcat:8.5.32   "/bin/bash"           17 minutes ago   Exited (0) 17 minutes ago              t1
+9a298f85467d   ubuntu:latest   "/bin/bash"           20 minutes ago   Exited (0) 20 minutes ago              u1
+304ab9fac4c3   7f4da0fc94bc    "/hello"              4 days ago       Exited (0) 4 days ago                  exciting_banach
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+> `docker ps -aq` 查看所有容器的id
+
+```shell
+# -q 参数表示只查看容器的id
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps -aq
+4dc2f201c510
+81b034ab278c
+37cc5800fa4c
+9a298f85467d
+304ab9fac4c3
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+> `docker ps -l` 查看最后创建的容器，无论该容器是否正在运行
+
+```shell
+# u3 容器正在运行
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps -l
+CONTAINER ID   IMAGE           COMMAND       CREATED         STATUS         PORTS     NAMES
+4dc2f201c510   ubuntu:latest   "/bin/bash"   6 minutes ago   Up 6 minutes             u3
+
+# 分离模式启动 u4 容器，不阻塞运行容器，此时 u4 会立即关闭
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker run --name u4 -d ubuntu:latest
+f35bd17da35b4ad56046f95706fbfa352b3520f760c29f0bd59cf6ab2bacc926
+# 此时 u4 容器是 exited 状态
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps -a
+CONTAINER ID   IMAGE           COMMAND               CREATED          STATUS                        PORTS     NAMES
+f35bd17da35b   ubuntu:latest   "/bin/bash"           8 seconds ago    Exited (0) 7 seconds ago                u4
+4dc2f201c510   ubuntu:latest   "/bin/bash"           8 minutes ago    Up 8 minutes                            u3
+81b034ab278c   ubuntu:latest   "tail -f /dev/null"   16 minutes ago   Exited (137) 12 minutes ago             u2
+37cc5800fa4c   tomcat:8.5.32   "/bin/bash"           21 minutes ago   Exited (0) 21 minutes ago               t1
+9a298f85467d   ubuntu:latest   "/bin/bash"           24 minutes ago   Exited (0) 24 minutes ago               u1
+304ab9fac4c3   7f4da0fc94bc    "/hello"              4 days ago       Exited (0) 4 days ago                   exciting_banach
+# 查看最后一次运行的容器，此时可以看到是 u4 容器
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps -l
+CONTAINER ID   IMAGE           COMMAND       CREATED          STATUS                      PORTS     NAMES
+f35bd17da35b   ubuntu:latest   "/bin/bash"   15 seconds ago   Exited (0) 14 seconds ago             u4
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
 
 
+> `docker ps -n 3` 查看最后创建的3个容器
+
+```shell
+# 查看最后创建的3个容器
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps -n 3
+CONTAINER ID   IMAGE           COMMAND               CREATED          STATUS                        PORTS     NAMES
+f35bd17da35b   ubuntu:latest   "/bin/bash"           2 minutes ago    Exited (0) 2 minutes ago                u4
+4dc2f201c510   ubuntu:latest   "/bin/bash"           10 minutes ago   Up 10 minutes                           u3
+81b034ab278c   ubuntu:latest   "tail -f /dev/null"   18 minutes ago   Exited (137) 14 minutes ago             u2
+# 添加 -q 参数，之查看最后三个容器的id，可以看到，-q的位置要在 n 前面
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps -nq 3
+invalid argument "q" for "-n, --last" flag: strconv.ParseInt: parsing "q": invalid syntax
+
+Usage:  docker ps [OPTIONS]
+
+Run 'docker ps --help' for more information
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps -qn 3
+f35bd17da35b
+4dc2f201c510
+81b034ab278c
+```
 
 
