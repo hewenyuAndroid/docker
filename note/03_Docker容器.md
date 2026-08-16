@@ -884,3 +884,123 @@ f35bd17da35b   ubuntu:latest   "/bin/bash"           About an hour ago   Exited 
 304ab9fac4c3   7f4da0fc94bc    "/hello"              4 days ago          Exited (0) 4 days ago                    exciting_banach
 hewenyu@hewenyu:/mnt/c/Users/he875$
 ```
+
+
+## 1.15、容器与宿主机文件传递
+
+
+`docker cp` 命令可以完成容器与宿主机中文件/目录的相互复制，无论该容器是否处于运行状态。 
+
+注意: `docker cp` 命令不支持容器之间的文件复制;
+
+### 1.15.1、拷贝容器内的文件到宿主机
+
+> 从运行的容器中拷贝文件
+
+```shell
+# 拷贝 t1 容器内部的 /conf/web.xml 文件到宿主机
+
+# 容器 t1 正在运行
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND       CREATED       STATUS         PORTS      NAMES
+37cc5800fa4c   tomcat:8.5.32   "/bin/bash"   2 hours ago   Up 3 minutes   8080/tcp   t1
+# 进入容器内部
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker exec -it t1 bash
+root@37cc5800fa4c:/usr/local/tomcat# ls conf -la | grep web.xml
+# conf 目录下的 web.xml 文件
+-rw------- 1 root root  169322 Jun 20  2018 web.xml
+
+# 在宿主机中执行拷贝命令
+hewenyu@hewenyu:/mnt/c/Users/he875$ ls docker
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker cp t1:/usr/local/tomcat/conf/web.xml ./docker/
+Successfully copied 171kB to /mnt/c/Users/he875/docker/
+hewenyu@hewenyu:/mnt/c/Users/he875$ ls docker -la
+total 168
+drwxrwxrwx 1 hewenyu hewenyu    512 Aug 16 16:32 .
+drwxrwxrwx 1 hewenyu hewenyu    512 Aug 16 16:26 ..
+# web.xml 为容器内拷贝出来的文件
+-rwxrwxrwx 1 hewenyu hewenyu 169322 Jun 21  2018 web.xml
+```
+
+> 从停止运行的容器中拷贝目录
+
+```shell
+# 先关闭运行的容器 t1
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND       CREATED       STATUS         PORTS      NAMES
+37cc5800fa4c   tomcat:8.5.32   "/bin/bash"   2 hours ago   Up 8 minutes   8080/tcp   t1
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker stop t1
+t1
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+hewenyu@hewenyu:/mnt/c/Users/he875$
+
+
+# 在宿主机中执行 cp 命令拷贝 conf 目录
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker cp t1:/usr/local/tomcat/conf ./docker/
+Successfully copied 221kB to /mnt/c/Users/he875/docker/
+hewenyu@hewenyu:/mnt/c/Users/he875$ ls docker -la
+total 168
+drwxrwxrwx 1 hewenyu hewenyu    512 Aug 16 16:34 .
+drwxrwxrwx 1 hewenyu hewenyu    512 Aug 16 16:26 ..
+# conf 目录为 t1 容器内部拷贝出来的目录
+drwxrwxrwx 1 hewenyu hewenyu    512 Jun 21  2018 conf
+-rwxrwxrwx 1 hewenyu hewenyu 169322 Jun 21  2018 web.xml
+hewenyu@hewenyu:/mnt/c/Users/he875$ ls docker/conf -la
+total 224
+drwxrwxrwx 1 hewenyu hewenyu    512 Jun 21  2018 .
+drwxrwxrwx 1 hewenyu hewenyu    512 Aug 16 16:34 ..
+-rwxrwxrwx 1 hewenyu hewenyu  13548 Jun 21  2018 catalina.policy
+-rwxrwxrwx 1 hewenyu hewenyu   7576 Jun 21  2018 catalina.properties
+-rwxrwxrwx 1 hewenyu hewenyu   1338 Jun 21  2018 context.xml
+-rwxrwxrwx 1 hewenyu hewenyu   1149 Jun 21  2018 jaspic-providers.xml
+-rwxrwxrwx 1 hewenyu hewenyu   2313 Jun 21  2018 jaspic-providers.xsd
+-rwxrwxrwx 1 hewenyu hewenyu   3622 Jun 21  2018 logging.properties
+-rwxrwxrwx 1 hewenyu hewenyu   7511 Jun 21  2018 server.xml
+-rwxrwxrwx 1 hewenyu hewenyu   2164 Jun 21  2018 tomcat-users.xml
+-rwxrwxrwx 1 hewenyu hewenyu   2633 Jun 21  2018 tomcat-users.xsd
+-rwxrwxrwx 1 hewenyu hewenyu 169322 Jun 21  2018 web.xml
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+
+### 1.15.2、拷贝宿主机的文件到容器内部
+
+> step1: 在宿主机中创建一个文件
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ touch docker/a.txt
+hewenyu@hewenyu:/mnt/c/Users/he875$ echo hello docker > docker/a.txt
+hewenyu@hewenyu:/mnt/c/Users/he875$ cat docker/a.txt
+hello docker
+```
+
+> step2: 执行cp命令，向 t1 容器拷贝文件
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker cp docker/a.txt t1:/usr/local/tomcat/
+Successfully copied 2.05kB to t1:/usr/local/tomcat/
+# 可以看到，此时 t1 容器是关闭的
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+> step3: 启动 t1 容器，查看文件
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker start t1
+t1
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND       CREATED       STATUS         PORTS      NAMES
+37cc5800fa4c   tomcat:8.5.32   "/bin/bash"   2 hours ago   Up 2 seconds   8080/tcp   t1
+# 可以看到容器内部已经存在了 a.txt 文件
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker exec -it t1 cat /usr/local/tomcat/a.txt
+hello docker
+```
+
+
+
+
+
+
