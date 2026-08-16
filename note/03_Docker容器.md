@@ -1158,5 +1158,81 @@ ubuntu:net-tools   54e8eb099508        229MB         71.6MB    U
 hewenyu@hewenyu:/mnt/c/Users/he875$
 ```
 
+## 1.17、导入导出容器
+
+`Docker` 镜像中的 `docker save` 和 `docker load` 命令分别用于 **导入/导出 镜像**。同样，针对 `Docker` 容器也有导入和导出的命令，分别为 `docker export` 和 `docker import`;
+
+### 1.17.1、导出容器
+
+`docker export` 命令用于将一个容器的文件系统导出为 `tar文件` 。例如，下面的命令是将 `tomcat:8.5.32` 镜像的容器 `t1` 导出到 `/home/hewenyu/docker`目录的 `tomcat8.tar` 文件中。 
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps -a
+CONTAINER ID   IMAGE              COMMAND               CREATED       STATUS                     PORTS     NAMES
+43cfe3a6354a   ubuntu:net-tools   "tail -f /dev/null"   6 hours ago   Up 6 hours                           u5
+2de5e292f815   ubuntu:latest      "tail -f /dev/null"   6 hours ago   Up 6 hours                           u_pack_image
+f35bd17da35b   ubuntu:latest      "/bin/bash"           8 hours ago   Exited (0) 8 hours ago               u4
+4dc2f201c510   ubuntu:latest      "/bin/bash"           8 hours ago   Exited (137) 7 hours ago             u3
+81b034ab278c   ubuntu:latest      "tail -f /dev/null"   8 hours ago   Exited (137) 7 hours ago             u2
+37cc5800fa4c   tomcat:8.5.32      "/bin/bash"           8 hours ago   Exited (0) 6 hours ago               t1
+304ab9fac4c3   7f4da0fc94bc       "/hello"              5 days ago    Exited (0) 5 days ago                exciting_banach
+# 导出 t1 容器
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker export -o /home/hewenyu/docker/tomcat8.tar t1
+# 可以看到，导出的 容器文件明显比 镜像文件要大的多
+hewenyu@hewenyu:/mnt/c/Users/he875$ ls -la /home/hewenyu/docker | grep tomcat
+-rw------- 1 hewenyu hewenyu 240024576 Aug 16 22:56 output_ubuntu_tomcat.tar
+-rw------- 1 hewenyu hewenyu 467603968 Aug 16 23:12 tomcat8.tar
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+### 1.17.2、导入容器
+
+`docker import` 命令用于根据指定的 `tar文件` 构建新的镜像。下面的命令是将 `tomcat8.tar` 导出为镜像 `tomcat:t1`。
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker images
+                                                                                                i Info →   U  In Use
+IMAGE              ID             DISK USAGE   CONTENT SIZE   EXTRA
+redis:7.2          6461ca4ac0c5        169MB         45.6MB
+tomcat:8.5.32      bbdb0de8298a        710MB          195MB    U
+ubuntu:latest      678c6550cc43        160MB         45.3MB    U
+ubuntu:net-tools   54e8eb099508        229MB         71.6MB    U
+# 导入 tomcat8.tar 文件问本地镜像
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker import /home/hewenyu/docker/tomcat8.tar tomcat:t1
+sha256:d976b3d5d3088cf958130b6638361470769fc84a473784d63520e7f27b9923d8
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker images
+                                                                                                i Info →   U  In Use
+IMAGE              ID             DISK USAGE   CONTENT SIZE   EXTRA
+redis:7.2          6461ca4ac0c5        169MB         45.6MB
+tomcat:8.5.32      bbdb0de8298a        710MB          195MB    U
+# tomcat:t1 镜像由 tomcat8.tar 文件导入
+tomcat:t1          d976b3d5d308        695MB          192MB
+ubuntu:latest      678c6550cc43        160MB         45.3MB    U
+ubuntu:net-tools   54e8eb099508        229MB         71.6MB    U
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+
+### 1.17.3、`docker save`、`docker load` 与 `docker export`、`docker import` 对比
+
+> 容器 export 与 镜像 save
+
+- `export` 作用于容器，`save` 作用于镜像，但它们导出的结果都为 `tar文件`;
+- `export` 一次只能对一个容器进行导出，`save` 一次可以对多个镜像进行导出;
+- `export` 只是对当前容器的文件系统快照进行导出，其会丢弃原镜像的所有历史记录与元数据信息，`save` 则是保存了`原镜像`的完整记录
+
+> 容器 import 与 镜像 load
+
+- `import` 导入的是容器包，`load` 加载的是镜像包，但最终都会恢复为镜像;
+- `import` 恢复为的镜像只包含当前镜像一层，`load` 恢复的镜像与原镜像的分层是完全相同;
+- `import` 恢复的镜像就是新构建的镜像，与原镜像的 `ImageID` 不同；`load`恢复的镜像与原镜像是同一个镜像，即`ImageID`相同; 
+- `import` 可以为导入的镜像指定 `<repository>`与 `<tag>` ，`load` 加载的镜像不能指定`<repository>` 与 `<tag>`，与原镜像的相同;
+
+### 1.17.4、`docker export`、`docker save` 与 `docker commit`
+
+- 相同点：`docker export` + `docker import` 会将一个容器变为一个镜像，`docker commit`也可以将一个容器变一个镜像。 
+- 不同点：`docker export` + `docker import` 恢复的镜像仅包含原容器生成的一层分层，`docker commit` 生成的镜像中包含容器的原镜像的所有分层信息。
+
+
 
 
