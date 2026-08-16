@@ -999,8 +999,164 @@ hewenyu@hewenyu:/mnt/c/Users/he875$ docker exec -it t1 cat /usr/local/tomcat/a.t
 hello docker
 ```
 
+## 1.16、提交容器为镜像
+
+通过 `docker commit` 命令可以将一个容器文件系统的当前快照生成为一个新的镜像。
+
+需求：在一个 `Ubuntu`容器中安装 `net-tools`工具包。使用`apt-get`安装`net-tools`;
 
 
+### 1.16.1、修改容器层
+
+首先创建并启动一个 `ubuntu` 容器，然后发现该容器中是没有安装 `ifconfig` 命令的。
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker run --name u_pack_image -d ubuntu:latest tail -f /dev/null
+2de5e292f815d4d13b23b7f173eea8ff886375c177b18712899f0d8f44737f89
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND               CREATED         STATUS         PORTS     NAMES
+2de5e292f815   ubuntu:latest   "tail -f /dev/null"   3 seconds ago   Up 2 seconds             u_pack_image
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker exec -it u_pack_image bash
+root@2de5e292f815:/# ifconfig
+bash: ifconfig: command not found
+root@2de5e292f815:/#
+```
+
+> 安装 net-tools 工具包
+
+```shell
+# 1.在容器内部执行 apt update 命令，更新软件包版本
+root@2de5e292f815:/# apt update
+Get:1 http://archive.ubuntu.com/ubuntu resolute InRelease [136 kB]
+Get:2 http://security.ubuntu.com/ubuntu resolute-security InRelease [137 kB]
+...
+Fetched 25.5 MB in 1min 10s (364 kB/s)
+7 packages can be upgraded. Run 'apt list --upgradable' to see them.
+
+# 2.执行 net-tools 软件包安装命令
+root@2de5e292f815:/# apt install -y net-tools
+Installing:
+  net-tools
+...
+
+# 3.再次执行 ifconfig 命令
+root@2de5e292f815:/# ifconfig
+eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 172.17.0.2  netmask 255.255.0.0  broadcast 172.17.255.255
+        ...
+root@2de5e292f815:/#
+```
+
+### 1.16.2、生成镜像
+
+将已经安装了ifconfig命令的容器生成为一个镜像，以后使用该镜像启动的容器都可以使用 `ifconfig` 命令。
+
+```shell
+docker commit [选项] <容器ID或名称> [<仓库名>:<标签>]
+```
+
+常用选项:
+
+- `-a, --author`：指定作者
+- `-m, --message`：记录提交信息
+- `--change`：在提交时应用 `Dockerfile` 指令（如 `CMD、EXPOSE、ENV` 等）
+
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND               CREATED          STATUS          PORTS     NAMES
+2de5e292f815   ubuntu:latest   "tail -f /dev/null"   11 minutes ago   Up 11 minutes             u_pack_image
+# 使用 docker commit 命令，为容器创建一个镜像，当前创建的镜像 repository 为 ubuntu， tag 为 net-tools
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker commit -a "he123456@126.com" -m "添加net-tools包" u_pack_image ubuntu:net-tools
+sha256:54e8eb099508cf4be796865cb4de26be137baf2b776a5f62d2b0b945e2b995da
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND               CREATED          STATUS          PORTS     NAMES
+2de5e292f815   ubuntu:latest   "tail -f /dev/null"   12 minutes ago   Up 12 minutes             u_pack_image
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker images
+                                                                                                      i Info →   U  In Use
+IMAGE              ID             DISK USAGE   CONTENT SIZE   EXTRA
+redis:7.2          6461ca4ac0c5        169MB         45.6MB
+tomcat:8.5.32      bbdb0de8298a        710MB          195MB    U
+ubuntu:latest      678c6550cc43        160MB         45.3MB    U
+ubuntu:net-tools   54e8eb099508        229MB         71.6MB
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+### 1.16.3、运行创建的镜像
+
+```shell
+# 运行自定义的 ubuntu:net-tools 镜像
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker run --name u5 -d ubuntu:net-tools tail -f /dev/null
+43cfe3a6354adf40ccbf07f3be84b6ba101c295ef9afaedeb29b954c64316652
+# u5 容器正在运行
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE              COMMAND               CREATED          STATUS          PORTS     NAMES
+43cfe3a6354a   ubuntu:net-tools   "tail -f /dev/null"   3 seconds ago    Up 2 seconds              u5
+2de5e292f815   ubuntu:latest      "tail -f /dev/null"   15 minutes ago   Up 15 minutes             u_pack_image
+# u5 容器执行 ifconfig 正常
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker exec -it u5 ifconfig
+eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 172.17.0.3  netmask 255.255.0.0  broadcast 172.17.255.255
+        ether ee:09:e7:81:0e:46  txqueuelen 0  (Ethernet)
+        RX packets 8  bytes 656 (656.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 3  bytes 126 (126.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+        inet 127.0.0.1  netmask 255.0.0.0
+        inet6 ::1  prefixlen 128  scopeid 0x10<host>
+        loop  txqueuelen 1000  (Local Loopback)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 0  bytes 0 (0.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+
+### 1.16.4、玄虚镜像
+
+悬虚镜像，即没有 `<repository>`与`<tag>`的镜像。悬虚镜像一般都是由于某些失误操作或其它一些操作而生成的副产物，一般是要被清除掉的。如果非要使用悬虚镜像，那只能通过其 `ImageID` 来使用了。
+
+```shell
+# 创建镜像时，没有指定 repository 和 tag
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker commit -a "he123456@126.com" -m "添加net-tools包" u_pack_image
+sha256:a67dbd194b50dbff61104e880ec5bdef95735dbca775a853bba86a5c98ad5b7c
+# docker images 命令不会显示玄虚镜像
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker images
+                                                                                                     i Info →   U  In Use
+IMAGE              ID             DISK USAGE   CONTENT SIZE   EXTRA
+redis:7.2          6461ca4ac0c5        169MB         45.6MB
+tomcat:8.5.32      bbdb0de8298a        710MB          195MB    U
+ubuntu:latest      678c6550cc43        160MB         45.3MB    U
+ubuntu:net-tools   54e8eb099508        229MB         71.6MB    U
+# 使用 -a 命令可以显示玄虚进项
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker images -a
+                                                                                                     i Info →   U  In Use
+IMAGE              ID             DISK USAGE   CONTENT SIZE   EXTRA
+redis:7.2          6461ca4ac0c5        169MB         45.6MB
+tomcat:8.5.32      bbdb0de8298a        710MB          195MB    U
+ubuntu:latest      678c6550cc43        160MB         45.3MB    U
+ubuntu:net-tools   54e8eb099508        229MB         71.6MB    U
+<untagged>         a67dbd194b50        229MB         71.6MB
+hewenyu@hewenyu:/mnt/c/Users/he875$
+
+
+
+# 使用 imageId 删除玄虚镜像
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker rmi a67dbd194b50
+Deleted: sha256:a67dbd194b50dbff61104e880ec5bdef95735dbca775a853bba86a5c98ad5b7c
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker images -a
+                                                                                                     i Info →   U  In Use
+IMAGE              ID             DISK USAGE   CONTENT SIZE   EXTRA
+redis:7.2          6461ca4ac0c5        169MB         45.6MB
+tomcat:8.5.32      bbdb0de8298a        710MB          195MB    U
+ubuntu:latest      678c6550cc43        160MB         45.3MB    U
+ubuntu:net-tools   54e8eb099508        229MB         71.6MB    U
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
 
 
 
