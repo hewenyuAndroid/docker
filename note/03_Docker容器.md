@@ -479,6 +479,29 @@ CONTAINER ID   IMAGE           COMMAND       CREATED          STATUS          PO
 hewenyu@hewenyu:/mnt/c/Users/he875$
 ```
 
+#### 1.5.6.4、`attach` 命令退出容器并结束容器
+
+`docker attach` 命令进入分离模式运行的容器时，不会新建进程，而是直接在容器进程内部运行，此时执行 `exit` 命令会关闭当前进程，导致容器也关闭了;
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND             CREATED          STATUS          PORTS                                         NAMES
+0598fe426396   tomcat:8.5.32   "catalina.sh run"   32 minutes ago   Up 32 minutes   0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp   t2
+4dc2f201c510   ubuntu:latest   "/bin/bash"         48 minutes ago   Up 48 minutes                                                 u3
+# 使用 attach 命令，进入后台运行的容器
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker attach u3
+root@4dc2f201c510:/# ls
+bin  boot  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+# 执行 exit 命令退出容器
+root@4dc2f201c510:/# exit
+exit
+# 此时可以看到 u3 容器也退出了
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND             CREATED          STATUS          PORTS                                         NAMES
+0598fe426396   tomcat:8.5.32   "catalina.sh run"   32 minutes ago   Up 32 minutes   0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp   t2
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
 ## 1.6、容器状态查看命令
 
 > `docker ps` 查看所有正在运行的容器
@@ -565,6 +588,244 @@ hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps -qn 3
 f35bd17da35b
 4dc2f201c510
 81b034ab278c
+```
+
+## 1.7、容器再进入命令 `docker exec`
+
+当我们以分离模式运行了一个容器，或以交互模式运行了一个容器，但容器内部执行的命令占用了交互命令行，而此时我们又想进入到容器中对容器内部进行一些操作，此时就需要用到 `exec/attach` 命令了。 
+
+注意，它们只能对正在运行的容器进行操作。
+
+```shell
+# 分离模式启动 tomcat 容器 t2
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker run --name t2 -dp 8081:8080 tomcat:8.5.32
+0598fe42639616894df9c43f5ad7352bda6ed466b8cbb4fdfa454ee8723910fd
+# 当前 t2 容器正在运行
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND             CREATED          STATUS          PORTS                                         NAMES
+0598fe426396   tomcat:8.5.32   "catalina.sh run"   3 seconds ago    Up 2 seconds    0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp   t2
+4dc2f201c510   ubuntu:latest   "/bin/bash"         15 minutes ago   Up 15 minutes                                                 u3
+
+# 执行 docker exec 命令，进入 t2 容器内部
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker exec -it t2 bash
+root@0598fe426396:/usr/local/tomcat# ls
+LICENSE  NOTICE  RELEASE-NOTES  RUNNING.txt  bin  conf  include  lib  logs  native-jni-lib  temp  webapps  work
+# 执行 exit 命令，退出 bash 终端
+root@0598fe426396:/usr/local/tomcat# exit
+exit
+# 此时 t2 容器还在运行
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND             CREATED              STATUS              PORTS                                         NAMES
+0598fe426396   tomcat:8.5.32   "catalina.sh run"   About a minute ago   Up About a minute   0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp   t2
+4dc2f201c510   ubuntu:latest   "/bin/bash"         16 minutes ago       Up 16 minutes                                                     u3
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+注意: `exec`命令会创建一个新的独立于容器的进程，而 `exit` 命令仅用于结束该新建进程。
+
+
+## 1.8、外部操作容器 `docker exec`
+
+`docker exec` 命令也可以在不进入容器的情况下执行容器内部的命令。例如仅想查看tomcat容器中工作目录中所包含的文件，直接在exec命令后紧
+跟要执行的命令即可直接看到其结果。
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker exec -it t2 ls -la
+total 136
+drwxr-sr-x 1 root staff  4096 Aug 14  2018 .
+drwxrwsr-x 1 root staff  4096 Aug 14  2018 ..
+-rw-r----- 1 root root  57092 Jun 20  2018 LICENSE
+-rw-r----- 1 root root   1723 Jun 20  2018 NOTICE
+-rw-r----- 1 root root   7138 Jun 20  2018 RELEASE-NOTES
+-rw-r----- 1 root root  16246 Jun 20  2018 RUNNING.txt
+drwxr-x--- 2 root root   4096 Aug 14  2018 bin
+drwx--S--- 1 root root   4096 Aug 16 07:20 conf
+drwxr-sr-x 3 root staff  4096 Aug 14  2018 include
+drwxr-x--- 2 root root   4096 Aug 14  2018 lib
+drwxr-x--- 1 root root   4096 Aug 16 07:20 logs
+drwxr-sr-x 3 root staff  4096 Aug 14  2018 native-jni-lib
+drwxr-x--- 2 root root   4096 Aug 14  2018 temp
+drwxr-x--- 7 root root   4096 Jun 20  2018 webapps
+drwxr-x--- 1 root root   4096 Aug 16 07:20 work
+```
+
+## 1.9、查看容器内进程信息
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker top t2
+UID                 PID                 PPID                C                   STIME               TTY                 TIME                CMD
+root                2801                2773                0                   15:17               ?                   00:00:11            /docker-java-home/jre/bin/java -Djava.util.logging.config.file=/usr/local/tomcat/conf/logging.properties -Djava.util.logging.manager=org.apache.juli.ClassLoaderLogManager -Djdk.tls.ephemeralDHKeySize=2048 -Djava.protocol.handler.pkgs=org.apache.catalina.webresources -Dorg.apache.catalina.security.SecurityListener.UMASK=0027 -Dignore.endorsed.dirs= -classpath /usr/local/tomcat/bin/bootstrap.jar:/usr/local/tomcat/bin/tomcat-juli.jar -Dcatalina.base=/usr/local/tomcat -Dcatalina.home=/usr/local/tomcat -Djava.io.tmpdir=/usr/local/tomcat/temp org.apache.catalina.startup.Bootstrap start
+```
+
+## 1.10、容器内日志查看命令
+
+`docker logs [容器]` 可以查看指定容器中应用的运行日志，无论该容器是运行还是停止状态。 
+
+### 1.10.1、查看所有日志
+
+`docker logs` 查看的是所有容器中应用的运行日志。这个日志对于不同的容器来说，其日志内容是不同的。由 `docker run` 命令的[command]决定（如果没有则由`Dockerfile`中的`CMD`指令决定）。
+
+> 查看 `tomcat` 日志
+
+```shell
+# 查看 t2 容器的日志，由于 t2 启动了 tomcat 容器，此时日志内容为 tomcat 的启停日志
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker logs t2
+16-Aug-2026 07:20:09.815 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Server version:        Apache Tomcat/8.5.32
+16-Aug-2026 07:20:09.820 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Server built:          Jun 20 2018 19:50:35 UTC
+16-Aug-2026 07:20:09.820 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Server number:         8.5.32.0
+16-Aug-2026 07:20:09.820 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log OS Name:               Linux
+16-Aug-2026 07:20:09.821 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log OS Version:            6.6.87.2-microsoft-standard-WSL2
+...
+```
+
+> 查看 `ubuntu` 日志
+
+```shell
+# 对于 ubuntu 来说，docker logs 输出的就是 /bin/bash 运行的历史记录
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker logs u3
+root@4dc2f201c510:/# ls
+bin  boot  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+root@4dc2f201c510:/# ls
+bin  boot  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+root@4dc2f201c510:/# exit
+exit
+```
+
+### 1.10.2、查看最后几条日志
+
+通过添加选项 `-n` 或 `--tail` 可以指定要显示的最后几条日志。
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker logs -n 3 u3
+bin  boot  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+root@4dc2f201c510:/# exit
+exit
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker logs --tail 3 u3
+bin  boot  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+root@4dc2f201c510:/# exit
+exit
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+### 1.11、启动已经关闭的容器
+
+通过 `docker start` 命令可以启动已经停止的指定容器，这个容器可以通过容器名称指定，也可以通过容器ID指定。
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker start u3
+u3
+hewenyu@hewenyu:/mnt/c/Users/he875$
+hewenyu@hewenyu:/mnt/c/Users/he875$
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND             CREATED          STATUS          PORTS                                         NAMES
+0598fe426396   tomcat:8.5.32   "catalina.sh run"   40 minutes ago   Up 40 minutes   0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp   t2
+4dc2f201c510   ubuntu:latest   "/bin/bash"         56 minutes ago   Up 4 seconds                                                  u3
+hewenyu@hewenyu:/mnt/c/Users/he875$ 
+```
+
+### 1.11.1、重启容器
+
+通过 `docker restart` 命令可以重启处于运行状态的指定容器。如果时关闭的容器，则会启动改容器;
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND             CREATED             STATUS          PORTS                                         NAMES
+0598fe426396   tomcat:8.5.32   "catalina.sh run"   45 minutes ago      Up 45 minutes   0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp   t2
+4dc2f201c510   ubuntu:latest   "/bin/bash"         About an hour ago   Up 4 minutes                                                  u3
+hewenyu@hewenyu:/mnt/c/Users/he875$
+# docker restart 可以重启正在运行的容器
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker restart u3
+u3
+# docker restart 也可以启动当前关闭的容器
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker restart u2
+u2
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND               CREATED             STATUS          PORTS                                         NAMES
+0598fe426396   tomcat:8.5.32   "catalina.sh run"     46 minutes ago      Up 46 minutes   0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp   t2
+4dc2f201c510   ubuntu:latest   "/bin/bash"           About an hour ago   Up 11 seconds                                                 u3
+81b034ab278c   ubuntu:latest   "tail -f /dev/null"   About an hour ago   Up 3 seconds                                                  u2
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+## 1.12、关闭容器
+
+### 1.12.1、`docker stop` 停止容器
+
+通过 `docker stop` 命令可以停止指定容器。若当前容器正在被其它进程访问，则在访问结束后再停止。
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND               CREATED             STATUS          PORTS                                         NAMES
+0598fe426396   tomcat:8.5.32   "catalina.sh run"     48 minutes ago      Up 48 minutes   0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp   t2
+4dc2f201c510   ubuntu:latest   "/bin/bash"           About an hour ago   Up 2 minutes                                                  u3
+81b034ab278c   ubuntu:latest   "tail -f /dev/null"   About an hour ago   Up 2 minutes                                                  u2
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker stop u2
+u2
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND             CREATED             STATUS          PORTS                                         NAMES
+0598fe426396   tomcat:8.5.32   "catalina.sh run"   48 minutes ago      Up 48 minutes   0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp   t2
+4dc2f201c510   ubuntu:latest   "/bin/bash"         About an hour ago   Up 2 minutes                                                  u3
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+### 1.12.2、`docker kill` 强制关闭容器
+
+通过 `docker kill` 命令可以强制停止指定容器。所谓强制停止是指，无论容器当前是否被其它进程访问都直接停止。 
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND             CREATED             STATUS          PORTS                                         NAMES
+0598fe426396   tomcat:8.5.32   "catalina.sh run"   49 minutes ago      Up 49 minutes   0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp   t2
+4dc2f201c510   ubuntu:latest   "/bin/bash"         About an hour ago   Up 3 minutes                                                  u3
+hewenyu@hewenyu:/mnt/c/Users/he875$
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker kill u3
+u3
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND             CREATED          STATUS          PORTS                                         NAMES
+0598fe426396   tomcat:8.5.32   "catalina.sh run"   49 minutes ago   Up 49 minutes   0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp   t2
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+### 1.12.3、组合命令关闭所有容器
+
+无论是 `docker kill` 还是 `docker stop`，都可使用下面方式停止所有容器。因为这两个命令的参数都可以是容器ID。
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND             CREATED          STATUS          PORTS                                         NAMES
+0598fe426396   tomcat:8.5.32   "catalina.sh run"   50 minutes ago   Up 50 minutes   0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp   t2
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker kill $(docker ps -q)
+0598fe426396
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+
+## 1.3、暂停容器
+
+通过 `docker pause` 命令可以暂停容器对外提供服务。 暂停的容器可以通过 `docker unpause` 命令可解除容器的暂停服务状态。
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker start t2
+t2
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND             CREATED          STATUS         PORTS                                         NAMES
+0598fe426396   tomcat:8.5.32   "catalina.sh run"   52 minutes ago   Up 3 seconds   0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp   t2
+# 执行 docker pause 命令暂停容器 t2
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker pause t2
+t2
+# 通过 docker ps 命令可以看到当前容器为运行状态，但是状态为 Paused，此时容器不能对外提供服务，访问 http://localhost:8081 失败
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND             CREATED          STATUS                       PORTS                                         NAMES
+0598fe426396   tomcat:8.5.32   "catalina.sh run"   54 minutes ago   Up About a minute (Paused)   0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp   t2
+# 执行 docker unpause t2 命令后，容器恢复正常，访问 http://localhost:8081 正常
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker unpause t2
+t2
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND             CREATED          STATUS              PORTS                                         NAMES
+0598fe426396   tomcat:8.5.32   "catalina.sh run"   54 minutes ago   Up About a minute   0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp   t2
+hewenyu@hewenyu:/mnt/c/Users/he875$
 ```
 
 
