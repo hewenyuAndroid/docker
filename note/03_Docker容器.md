@@ -369,3 +369,117 @@ root@d6e80acab53c:/#
 ```
 
 进入运行的容器内部后，如果想停止容器运行可以使用 `docker stop 容器名称` 的方式。如果想退出容器但是保持容器运行，可以使用 `ctrl+p+q` (先按住 `ctrl+p` 然后按 `q`)的快捷键组合退出容器；
+
+### 1.5.6、容器退出命令
+
+#### 1.5.6.1、交互模式启动容器执行 `exit`
+
+交互模式运行的 `ubuntu` 容器，在命令行中运行 `exit` 命令后，通过 `docker ps –a` 可以查看到该容器已经退出了。
+
+```shell
+# 交互模式启动 ubuntu 镜像的容器
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker run --name u1 -it ubuntu:latest /bin/bash
+root@9a298f85467d:/# ls
+bin  boot  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+# 执行 exit 命令
+root@9a298f85467d:/# exit
+exit
+# 退出容器后，执行 docker ps 发现 u1 容器已经关闭了
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps -a
+CONTAINER ID   IMAGE           COMMAND       CREATED          STATUS                     PORTS     NAMES
+9a298f85467d   ubuntu:latest   "/bin/bash"   12 seconds ago   Exited (0) 7 seconds ago             u1
+304ab9fac4c3   7f4da0fc94bc    "/hello"      4 days ago       Exited (0) 4 days ago                exciting_banach
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+交互模式运行的 `tomcat` 容器，在 `bash` 终端中执行 `exit` 命令后，会关闭容器并退出
+
+```shell
+# 交互模式启动 taomcat ，由于带了 /bin/bash 参数，此时会启动容器，但是不会启动 tomcat
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker run --name t1 -it tomcat:8.5.32 /bin/bash
+root@37cc5800fa4c:/usr/local/tomcat# ls
+LICENSE  NOTICE  RELEASE-NOTES  RUNNING.txt  bin  conf  include  lib  logs  native-jni-lib  temp  webapps  work
+# 在容器内部执行 exit 命令
+root@37cc5800fa4c:/usr/local/tomcat# exit
+exit
+# 查看正在运行的容器，发现没有 t1 容器
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+# 查看所有的容器，发现 t1 容器已经关闭了
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps -a
+CONTAINER ID   IMAGE           COMMAND       CREATED          STATUS                     PORTS     NAMES
+37cc5800fa4c   tomcat:8.5.32   "/bin/bash"   10 seconds ago   Exited (0) 5 seconds ago             t1
+9a298f85467d   ubuntu:latest   "/bin/bash"   3 minutes ago    Exited (0) 3 minutes ago             u1
+304ab9fac4c3   7f4da0fc94bc    "/hello"      4 days ago       Exited (0) 4 days ago                exciting_banach
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+#### 1.5.6.2、分离模式启动容器，进入容器后再执行 `exit`
+
+分离模式运行的 `ubuntu` 容器，执行 `docker exec -it u2 bash` 命令，进入 `ubuntu` 容器后，在内部执行 `exit` 命令，此时会关闭 `bash` 终端，但是不会退出容器
+
+```shell
+# 查看当前运行的容器
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+# 分离模式启动 ubuntu 容器
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker run --name u2 -d ubuntu:latest tail -f /dev/null
+81b034ab278c61422374f7875103396926e08c96cbbf5c23ed554cc98064199f
+# 启动后，可以看到当前 u2 容器正在运行
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND               CREATED         STATUS         PORTS     NAMES
+81b034ab278c   ubuntu:latest   "tail -f /dev/null"   3 seconds ago   Up 2 seconds             u2
+# 进入分离模式运行的容器内部
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker exec -it u2 bash
+root@81b034ab278c:/# ls
+bin  boot  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+# 执行 exit 命令，退出
+root@81b034ab278c:/# exit
+exit
+# 执行 docker ps 命令，此时可以看到 u2 容器还在运行
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND               CREATED          STATUS          PORTS     NAMES
+81b034ab278c   ubuntu:latest   "tail -f /dev/null"   30 seconds ago   Up 29 seconds             u2
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+此时需要执行 `docker stop` 命令关闭容器
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker stop u2
+u2
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps -a
+CONTAINER ID   IMAGE           COMMAND               CREATED          STATUS                            PORTS     NAMES
+81b034ab278c   ubuntu:latest   "tail -f /dev/null"   5 minutes ago    Exited (137) About a minute ago             u2
+37cc5800fa4c   tomcat:8.5.32   "/bin/bash"           11 minutes ago   Exited (0) 11 minutes ago                   t1
+9a298f85467d   ubuntu:latest   "/bin/bash"           14 minutes ago   Exited (0) 14 minutes ago                   u1
+304ab9fac4c3   7f4da0fc94bc    "/hello"              4 days ago       Exited (0) 4 days ago                       exciting_banach
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+#### 1.5.6.3、退出交互模式启动的的容器而不关闭容器 `ctrl+p+q`
+
+
+注：先按下Ctrl + P，然后再按下Q。
+
+```shell
+# 交互模式启动 ubuntu 容器
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker run --name u3 -it ubuntu:latest /bin/bash
+root@4dc2f201c510:/# ls
+bin  boot  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+# 执行 ctrl + p 然后再 按下 q 组合键后退出了 u3 的交互终端
+# 此时执行 docker ps 命令，发现容器还在运行
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps
+CONTAINER ID   IMAGE           COMMAND       CREATED          STATUS          PORTS     NAMES
+4dc2f201c510   ubuntu:latest   "/bin/bash"   15 seconds ago   Up 14 seconds             u3
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+
+
+
+
