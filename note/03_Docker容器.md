@@ -802,7 +802,7 @@ hewenyu@hewenyu:/mnt/c/Users/he875$
 ```
 
 
-## 1.3、暂停容器
+## 1.13、暂停容器
 
 通过 `docker pause` 命令可以暂停容器对外提供服务。 暂停的容器可以通过 `docker unpause` 命令可解除容器的暂停服务状态。
 
@@ -828,4 +828,59 @@ CONTAINER ID   IMAGE           COMMAND             CREATED          STATUS      
 hewenyu@hewenyu:/mnt/c/Users/he875$
 ```
 
+## 1.14、删除容器
 
+`docker rm` 命令在默认情况下，要删除的容器必须是已经停止的容器。当然，这个容器可以使用容器名或容器ID指定。
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps -a
+CONTAINER ID   IMAGE           COMMAND               CREATED             STATUS                         PORTS                                         NAMES
+0598fe426396   tomcat:8.5.32   "catalina.sh run"     58 minutes ago      Up 5 minutes                   0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp   t2
+f35bd17da35b   ubuntu:latest   "/bin/bash"           About an hour ago   Exited (0) About an hour ago                                                 u4
+4dc2f201c510   ubuntu:latest   "/bin/bash"           About an hour ago   Exited (137) 8 minutes ago                                                   u3
+81b034ab278c   ubuntu:latest   "tail -f /dev/null"   About an hour ago   Exited (137) 10 minutes ago                                                  u2
+37cc5800fa4c   tomcat:8.5.32   "/bin/bash"           About an hour ago   Exited (0) About an hour ago                                                 t1
+9a298f85467d   ubuntu:latest   "/bin/bash"           2 hours ago         Exited (0) 2 hours ago                                                       u1
+304ab9fac4c3   7f4da0fc94bc    "/hello"              4 days ago          Exited (0) 4 days ago                                                        exciting_banach
+# u1 容器未运行，docker rm 命令可以正常删除
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker rm u1
+u1
+# t2 容器正在运行，此时运行 docker rm 报错
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker rm t2
+Error response from daemon: cannot remove container "t2": container is running: stop the container before removing or force remove
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps -a
+CONTAINER ID   IMAGE           COMMAND               CREATED             STATUS                         PORTS                                         NAMES
+0598fe426396   tomcat:8.5.32   "catalina.sh run"     59 minutes ago      Up 6 minutes                   0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp   t2
+f35bd17da35b   ubuntu:latest   "/bin/bash"           About an hour ago   Exited (0) About an hour ago                                                 u4
+4dc2f201c510   ubuntu:latest   "/bin/bash"           About an hour ago   Exited (137) 9 minutes ago                                                   u3
+81b034ab278c   ubuntu:latest   "tail -f /dev/null"   About an hour ago   Exited (137) 10 minutes ago                                                  u2
+37cc5800fa4c   tomcat:8.5.32   "/bin/bash"           About an hour ago   Exited (0) About an hour ago                                                 t1
+304ab9fac4c3   7f4da0fc94bc    "/hello"              4 days ago          Exited (0) 4 days ago                                                        exciting_banach
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+### 1.14.1、`docker rm -f` 强制删除容器
+
+在 `docker rm` 命令中添加 `-f` 可实现强制删除容器。即，无论容器是否停止都会删除。 
+
+```shell
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps -a
+CONTAINER ID   IMAGE           COMMAND               CREATED             STATUS                         PORTS                                         NAMES
+0598fe426396   tomcat:8.5.32   "catalina.sh run"     About an hour ago   Up 8 minutes                   0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp   t2
+f35bd17da35b   ubuntu:latest   "/bin/bash"           About an hour ago   Exited (0) About an hour ago                                                 u4
+4dc2f201c510   ubuntu:latest   "/bin/bash"           About an hour ago   Exited (137) 11 minutes ago                                                  u3
+81b034ab278c   ubuntu:latest   "tail -f /dev/null"   About an hour ago   Exited (137) 12 minutes ago                                                  u2
+37cc5800fa4c   tomcat:8.5.32   "/bin/bash"           2 hours ago         Exited (0) 2 hours ago                                                       t1
+304ab9fac4c3   7f4da0fc94bc    "/hello"              4 days ago          Exited (0) 4 days ago                                                        exciting_banach
+# 使用 docker rm -f 命令可以强制删除正在运行的容器，容器删除后运行的容器停止服务
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker rm -f t2
+t2
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker ps -a
+CONTAINER ID   IMAGE           COMMAND               CREATED             STATUS                         PORTS     NAMES
+f35bd17da35b   ubuntu:latest   "/bin/bash"           About an hour ago   Exited (0) About an hour ago             u4
+4dc2f201c510   ubuntu:latest   "/bin/bash"           About an hour ago   Exited (137) 11 minutes ago              u3
+81b034ab278c   ubuntu:latest   "tail -f /dev/null"   About an hour ago   Exited (137) 12 minutes ago              u2
+37cc5800fa4c   tomcat:8.5.32   "/bin/bash"           2 hours ago         Exited (0) 2 hours ago                   t1
+304ab9fac4c3   7f4da0fc94bc    "/hello"              4 days ago          Exited (0) 4 days ago                    exciting_banach
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
