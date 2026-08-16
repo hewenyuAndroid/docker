@@ -488,6 +488,64 @@ hewenyu@hewenyu:/mnt/c/Users/he875$ sudo docker inspect redis:7.2
 ```
 
 
+## 2.6、导入导出镜像
+
+在本地生成一个镜像，想将其导出后在另一电脑上使用，则可通过导出/导入镜像来完成。
+
+
+## 2.6.1、导出镜像
+
+`docker save` 命令用于将一个或多个镜像导出为 `tar文件`。例如，下面的命令是将 `ubuntu:latest` 与`tomcat:8.5.32` 镜像导出到当前 `/home/hewenyu/docker` 目录的`output_ubuntu_tomcat.tar`文件中。 
+
+```shell
+# 导出镜像
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker save -o "/home/hewenyu/docker/output_ubuntu_tomcat.tar" ubuntu:latest tomcat:8.5.32
+# 查看导出的镜像
+hewenyu@hewenyu:/mnt/c/Users/he875$ ls -la /home/hewenyu/docker
+total 234408
+drwxr-xr-x 2 hewenyu hewenyu      4096 Aug 16 22:56 .
+drwxr-x--- 8 hewenyu hewenyu      4096 Aug 16 22:53 ..
+-rw------- 1 hewenyu hewenyu 240024576 Aug 16 22:56 output_ubuntu_tomcat.tar
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
+## 2.6.2、导入镜像
+
+`docker load` 用于将一个 `tar 文件` 导入并加载为一个或多个镜像。
+
+```shell
+# 查看当前镜像
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker images
+                                                                                            i Info →   U  In Use
+IMAGE              ID             DISK USAGE   CONTENT SIZE   EXTRA
+redis:7.2          6461ca4ac0c5        169MB         45.6MB
+tomcat:8.5.32      bbdb0de8298a        710MB          195MB    U
+ubuntu:latest      678c6550cc43        160MB         45.3MB    U
+ubuntu:net-tools   54e8eb099508        229MB         71.6MB    U
+# 删除 ubuntu:latest 和 tomcat:8.5.32 镜像
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker rmi -f ubuntu:latest tomcat:8.5.32
+Untagged: ubuntu:latest
+Untagged: tomcat:8.5.32
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker images
+                                                                                            i Info →   U  In Use
+IMAGE              ID             DISK USAGE   CONTENT SIZE   EXTRA
+redis:7.2          6461ca4ac0c5        169MB         45.6MB
+ubuntu:net-tools   54e8eb099508        229MB         71.6MB    U
+# 从之前导出的 output_ubuntu_tomcat.tar 文件中导入镜像
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker load -i /home/hewenyu/docker/output_ubuntu_tomcat.tar
+Loaded image: ubuntu:latest
+Loaded image: tomcat:8.5.32
+# 导入镜像成功
+hewenyu@hewenyu:/mnt/c/Users/he875$ docker images
+                                                                                            i Info →   U  In Use
+IMAGE              ID             DISK USAGE   CONTENT SIZE   EXTRA
+redis:7.2          6461ca4ac0c5        169MB         45.6MB
+tomcat:8.5.32      bbdb0de8298a        710MB          195MB    U
+ubuntu:latest      678c6550cc43        160MB         45.3MB    U
+ubuntu:net-tools   54e8eb099508        229MB         71.6MB    U
+hewenyu@hewenyu:/mnt/c/Users/he875$
+```
+
 
 
 
