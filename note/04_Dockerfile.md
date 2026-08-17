@@ -70,3 +70,42 @@ COPY package.json yarn.lock /app/
 > `MAINTAINER <name>`
 
 `MAINTAINER` 指令的参数填写的一般是维护者姓名和信箱。不过，该指令官方已不建议使用，而是使用 `LABEL` 指令代替。
+
+## 2.5、`ENV`-设置环境变量
+
+```shell
+ENV <键>=<值> [<键2>=<值2> ... ]
+# 旧式写法，不推荐（值中包含空格时容易混淆）
+ENV <键> <值>
+
+# 案例
+ENV NODE_ENV=production APP_PORT=3000
+# 设置两个环境变量：NODE_ENV 为 production，APP_PORT 为 3000
+```
+
+| 部分        | 含义                                                                                                                          |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `<键>=<值>` | 键值对，多个可以用空格分隔。值可以包含空格，但如果值本身包含空格或特殊字符，建议用双引号包裹，如 `ENV MY_VAR="hello world"`。 |
+
+- `ENV`变量在构建过程和容器运行时都可用;
+- ​每个 `ENV` 指令会创建一个新的镜像层，因此过多的 `ENV` 会增加镜像层数。可以在一行内设置多个变量。
+
+> 使用 ENV 环境变量
+
+```shell
+# 在 RUN 指令中使用 ENV 环境变量
+ENV APP_DIR=/opt/myapp
+RUN mkdir -p $APP_DIR && echo "directory created at $APP_DIR"
+
+
+# 在 CMD 或 ENTRYPOINT 中使用 ENV 环境变量
+ENV NODE_ENV=production
+# 这里使用了 exec 形式（JSON 数组），变量 $NODE_ENV 不会被 shell 展开，最终传给 node 的参数是字面量 $NODE_ENV。
+CMD ["node", "app.js", "--env", "$NODE_ENV"]
+
+
+# 在 COPY 或 ADD 命令中使用
+ENV SRC_FILE=config.prod.json
+# COPY 和 ADD 的源路径支持使用ENV环境变量替换，目标路径不支持
+COPY $SRC_FILE /app/config.json
+```
