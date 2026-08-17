@@ -1116,15 +1116,15 @@ hewenyu@hewenyu:/mnt/c/Users/he875$
 ```
 
 
-### 1.16.4、玄虚镜像
+### 1.16.4、虚玄镜像
 
-悬虚镜像，即没有 `<repository>`与`<tag>`的镜像。悬虚镜像一般都是由于某些失误操作或其它一些操作而生成的副产物，一般是要被清除掉的。如果非要使用悬虚镜像，那只能通过其 `ImageID` 来使用了。
+虚玄镜像，即没有 `<repository>`与`<tag>`的镜像。虚玄镜像一般都是由于某些失误操作或其它一些操作而生成的副产物，一般是要被清除掉的。如果非要使用虚玄镜像，那只能通过其 `ImageID` 来使用了。
 
 ```shell
 # 创建镜像时，没有指定 repository 和 tag
 hewenyu@hewenyu:/mnt/c/Users/he875$ docker commit -a "he123456@126.com" -m "添加net-tools包" u_pack_image
 sha256:a67dbd194b50dbff61104e880ec5bdef95735dbca775a853bba86a5c98ad5b7c
-# docker images 命令不会显示玄虚镜像
+# docker images 命令不会显示虚玄镜像
 hewenyu@hewenyu:/mnt/c/Users/he875$ docker images
                                                                                                      i Info →   U  In Use
 IMAGE              ID             DISK USAGE   CONTENT SIZE   EXTRA
@@ -1132,7 +1132,7 @@ redis:7.2          6461ca4ac0c5        169MB         45.6MB
 tomcat:8.5.32      bbdb0de8298a        710MB          195MB    U
 ubuntu:latest      678c6550cc43        160MB         45.3MB    U
 ubuntu:net-tools   54e8eb099508        229MB         71.6MB    U
-# 使用 -a 命令可以显示玄虚进项
+# 使用 -a 命令可以显示虚玄镜像
 hewenyu@hewenyu:/mnt/c/Users/he875$ docker images -a
                                                                                                      i Info →   U  In Use
 IMAGE              ID             DISK USAGE   CONTENT SIZE   EXTRA
@@ -1145,7 +1145,7 @@ hewenyu@hewenyu:/mnt/c/Users/he875$
 
 
 
-# 使用 imageId 删除玄虚镜像
+# 使用 imageId 删除虚玄镜像
 hewenyu@hewenyu:/mnt/c/Users/he875$ docker rmi a67dbd194b50
 Deleted: sha256:a67dbd194b50dbff61104e880ec5bdef95735dbca775a853bba86a5c98ad5b7c
 hewenyu@hewenyu:/mnt/c/Users/he875$ docker images -a
@@ -1234,5 +1234,23 @@ hewenyu@hewenyu:/mnt/c/Users/he875$
 - 不同点：`docker export` + `docker import` 恢复的镜像仅包含原容器生成的一层分层，`docker commit` 生成的镜像中包含容器的原镜像的所有分层信息。
 
 
+> 一个典型镜像的分层结构
+
+```txt
+ubuntu:latest 基础层（包含 /bin, /lib 等）
+  └── RUN apt update && apt install -y curl   （新层：新增 curl 相关文件）
+       └── COPY app.sh /app/                   （新层：添加 app.sh）
+            └── CMD ["bash"]                   （元数据层，不改变文件系统）
+```
+
+- 历史层就是这些“增量变更”的记录。`docker history <镜像名>` 可以查看每一层的大小和创建命令。
+- `docker commit` 会在原有镜像的所有层之上追加一个新层，保存容器运行期间的变化。所以新镜像保留了完整的分层历史。
+- `docker export` 则把所有层扁平化成一个单一的文件系统快照，丢弃了分层结构。导入后生成的新镜像只有一层，没有历史可查。
+
+| 命令          | 操作对象                | 保留分层                  | 保留元数据                                | 还原方式         | 典型用途                                         |
+| ------------- | ----------------------- | ------------------------- | ----------------------------------------- | ---------------- | ------------------------------------------------ |
+| docker save   | 镜像                    | ✅ 完整保留所有历史层     | ✅ 保留 CMD、ENV、EXPOSE 等全部元数据     | docker load      | 镜像备份、迁移到其他机器、离线分发               |
+| docker export | 容器（文件系统）        | ❌ 扁平化为单层           | ❌ 丢失所有元数据                         | docker import    | 提取容器文件系统快照、轻量级迁移（不关心元数据） |
+| docker commit | 容器（文件系统+元数据） | ✅ 在原有镜像层上追加新层 | ✅ 保留原镜像元数据（可用 --change 修改） | 直接作为镜像使用 | 快速保存容器修改为镜像（临时/调试用）            |
 
 
