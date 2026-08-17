@@ -109,3 +109,86 @@ ENV SRC_FILE=config.prod.json
 # COPY 和 ADD 的源路径支持使用ENV环境变量替换，目标路径不支持
 COPY $SRC_FILE /app/config.json
 ```
+
+## 2.6、`EXPOSE`-声明端口
+
+```shell
+EXPOSE <端口>[/<协议>] [<端口2>[/<协议>] ...]
+
+
+# 案例
+EXPOSE 80/tcp 443/udp
+# 声明容器在运行时监听 TCP 80 端口和 UDP 443 端口。
+```
+
+| 部分      | 含义                                               |
+| --------- | -------------------------------------------------- |
+| `<端口>`  | 容器内应用监听的端口号。                           |
+| `/<协议>` | （可选）协议类型，默认为 `tcp`，也可以指定 `udp`。 |
+
+> 这只是文档性质，实际端口映射仍需要在 `docker run` 时使用 `-p` 或 `-P` 参数
+
+## 2.7、`CMD`-容器启动时的默认命令
+
+```shell
+# # shell 形式
+CMD <命令>
+# exec 形式（推荐）
+CMD ["<可执行文件>", "<参数1>", ...]
+# 作为 ENTRYPOINT 的默认参数
+CMD ["<参数1>", "<参数2>", ...]
+
+
+# 案例
+CMD ["node", "app.js"]
+# 容器启动时运行 node app.js
+```
+
+| 形式          | 说明                                                                             |
+| ------------- | -------------------------------------------------------------------------------- |
+| `shell` 形式​ | 通过 `/bin/sh -c` 执行命令，`PID` 为 `1` 的是 `shell` 进程，信号处理可能有问题。 |
+| `exec` 形式​  | 直接运行指定程序，`PID` 为 `1` 的是该程序本身，能正确接收信号（如 `SIGTERM`）。  |
+| 参数列表形式​ | 仅提供参数，此时必须搭配 `ENTRYPOINT` 使用，作为 `ENTRYPOINT` 的默认参数。       |
+
+- 如果在 `docker run` 后面附加了其他命令（如 `docker run myimage bash`），则 `CMD` 会被覆盖，改为运行 `bash`。
+- 一个 `Dockerfile` 中只能有一个 `CMD`，如果有多个则只有最后一个生效;
+
+## 2.8、`ENTRYPOINT`-容器入口点
+
+```shell
+# shell 形式
+ENTRYPOINT <命令>
+# exec 形式（推荐）
+ENTRYPOINT ["<可执行文件>", "<参数1>", ...]
+
+
+# 案例
+ENTRYPOINT ["python"]
+CMD ["-c", "print('Hello')"]
+# 容器启动时执行 python -c "print('Hello')"
+# 如果运行 docker run myimage script.py，则实际执行 python script.py（CMD 被覆盖，ENTRYPOINT 保持不变）。
+```
+
+- `ENTRYPOINT` 定义的命令不会被​ `docker run` 后面的命令行参数覆盖。
+- `docker run` 后面的参数会作为 `ENTRYPOINT` 的参数追加（如果 `ENTRYPOINT` 是 `exec` 形式）。
+- 通常 `ENTRYPOINT` 固定程序的入口，`CMD` 提供默认参数。
+- 尽量使用 `exec` 形式的 `ENTRYPOINT`，以便正确处理信号。
+
+## 2.9、`ARG`-构建时的变量
+
+```shell
+ARG <变量名>[=<默认值>]
+
+# 案例
+ARG VERSION=1.0
+RUN echo "Building version $VERSION"
+# 构建时可以这样传值：docker build --build-arg VERSION=2.0 .
+```
+
+| 部分        | 含义                                                                      |
+| ----------- | ------------------------------------------------------------------------- |
+| `<变量名>`  | 变量名称，在 `docker build` 时可以通过 `--build-arg <变量名>=<值>` 传入。 |
+| `=<默认值>` | （可选）变量的默认值，如果没有传入则使用该默认值。                        |
+
+- `ARG` 只在构建过程中有效，容器运行时无法获取（除非再次用 `ENV` 赋值）。
+- `ENV` 在容器构建时和运行时都有效;
