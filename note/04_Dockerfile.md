@@ -273,3 +273,106 @@ RUN echo "Building version $VERSION"
 
 - `ARG` 只在构建过程中有效，容器运行时无法获取（除非再次用 `ENV` 赋值）。
 - `ENV` 在容器构建时和运行时都有效;
+
+
+
+
+# 3、构建镜像
+
+
+在构建自己的镜像之前，首先要了解一个特殊的镜像 `scratch`。 `scratch` 镜像是一个空镜像，是所有镜像的 `Base Image`（相当于面向对象编程中的`Object`类）。`scratch` 镜像只能在 `Dockerfile` 中被继承，不能通过 `pull`命令拉取，不能`run`，也没有`tag`。并且它也不会生成镜像中的文件系统层。在`Docker`中，`scratch`是一个保留字，用户不能作为自己的镜像名称使用。
+
+
+## 3.1、构建一个 `hello world` 镜像 (本地编译+Docker打包)
+
+### 3.1.1、安装 `gcc` 编译器
+
+```shell
+# 更新软件包版本 && 安装 gcc
+sudo apt update && sudo apt-get install -y gcc
+# 查看 gcc 版本
+gcc --version
+```
+
+### 3.1.2、编写程序并编译
+
+```shell
+hewenyu@hewenyu:~/docker$ cat hello.c
+#include <stdio.h>
+
+int main() {
+    printf("Hello, World from C!\n");
+    return 0;
+}
+```
+
+> 编译
+
+```shell
+# hewenyu@hewenyu:~/docker$ gcc -o hello hello.c
+# 注意，这里要使用 静态编译，
+hewenyu@hewenyu:~/docker$ gcc --static -o hello hello.c
+hewenyu@hewenyu:~/docker$ ls
+hello  hello.c
+hewenyu@hewenyu:~/docker$ ./hello
+Hello, World from C!
+```
+
+### 3.1.3、编写 `Dockerfile`
+
+```shell
+hewenyu@hewenyu:~/docker$ ls
+# Dockerfile 和 hello 文件在同一个目录下
+Dockerfile  hello  hello.c
+hewenyu@hewenyu:~/docker$ cat Dockerfile
+# 继承空镜像
+FROM scratch
+# 将 hello 文件拷贝到镜像的根目录
+COPY hello /
+# 执行 hello 文件
+CMD ["/hello"]
+```
+
+### 3.1.4、构建镜像
+
+```shell
+# 最后的 . 不要忘记
+hewenyu@hewenyu:~/docker$ docker build -t my-hello-world:1.0 .
+[+] Building 1.0s (5/5) FINISHED                                                                         docker:default
+ => [internal] load build definition from Dockerfile                                                               0.0s
+ => => transferring dockerfile: 167B                                                                               0.0s
+ => [internal] load .dockerignore                                                                                  0.1s
+ => => transferring context: 2B                                                                                    0.0s
+ => [internal] load build context                                                                                  0.1s
+ => => transferring context: 15.99kB                                                                               0.0s
+ => [1/1] COPY hello /                                                                                             0.1s
+ => exporting to image                                                                                             0.5s
+ => => exporting layers                                                                                            0.2s
+ => => exporting manifest sha256:5f634d0dfaf0e3f9aea52c26e23701d0a5294a568e0215c75fc8eb65036dcf44                  0.0s
+ => => exporting config sha256:4f6bdecc9d135dc7d5b655c4b6db0e4429ee8a01f99d0595edc76817c800b048                    0.0s
+ => => exporting attestation manifest sha256:e757425edf506fefd9efd2ee3090052e75adca141f4708ceee75c637f818c7ad      0.1s
+ => => exporting manifest list sha256:96a85ad12b03b9e8759c968c4d1f73d5b883f5d84b8fb06b112b57de1b1cd1aa             0.0s
+ => => naming to docker.io/library/my-hello-world:1.0                                                              0.0s
+ => => unpacking to docker.io/library/my-hello-world:1.0                                                           0.1s
+hewenyu@hewenyu:~/docker$
+```
+
+- `-t`用于指定要生成的镜像的`<repository>`与`<tag>`。若省略`tag`，则默认为`latest`。
+- 最后的点 `.` 是一个宿主机的`URL`路径，构建镜像时会从该路径中查找`Dockerfile`文件。同时该路径也是在`Dockerfile`中`ADD`、`COPY`指令中若使用的是相对路径，那个相对路径就相对的这个路径。不过需要注意，即使`ADD`、`COPY`指令中使用绝对路径来指定源文件，该源文件所在路径也必须要在这个URL指定目录或子目录内，否则将无法找到该文件。
+
+### 3.1.5、查看并执行镜像
+
+```shell
+# 查看镜像
+hewenyu@hewenyu:~/docker$ docker images my-hello-world:1.0
+                                                                                                    i Info →   U  In Use
+IMAGE                ID             DISK USAGE   CONTENT SIZE   EXTRA
+my-hello-world:1.0   96a85ad12b03       25.5kB         4.97kB
+hewenyu@hewenyu:~/docker$
+
+# 运行镜像
+hewenyu@hewenyu:~/docker$ docker run my-hello-world:1.0
+Hello, World from C!
+```
+
+
