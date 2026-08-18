@@ -65,13 +65,46 @@ COPY package.json yarn.lock /app/
 | `<源路径>`            | 构建上下文中的文件或目录路径（可以是多个，用空格分隔）。支持通配符，如 `\*.py`。 |
 | `<目标路径>`          | 容器内的目标路径，可以是绝对路径或相对 `WORKDIR` 的相对路径。                    |
 
-## 2.2、`MAINTAINER`
+## 2.4、`ADD`-增强版复制
 
-> `MAINTAINER <name>`
+```shell
+ADD [--chown=<用户>:<组>] [--chmod=<权限>] <源路径>... <目标路径>
 
-`MAINTAINER` 指令的参数填写的一般是维护者姓名和信箱。不过，该指令官方已不建议使用，而是使用 `LABEL` 指令代替。
+# 案例
+ADD app.tar.gz /opt/
+# 将 app.tar.gz 解压到 /opt/ 目录下，相当于先复制再解压。
+```
 
-## 2.5、`ENV`-设置环境变量
+参数与 `COPY` 相同，但是增加了两个特性:
+
+1. **自动解压**：如果源路径是一个本地 `tar` 压缩文件（`.tar`、`.tar.gz`、`.tgz`、.`bz2` 等），会自动解压到目标目录。
+2. **远程 `URL`**：源路径可以是 URL，Docker 会下载该文件并放入目标路径（但不会自动解压远程 tar 包）。
+
+## 2.5、`RUN`-执行构建命令
+
+```shell
+# shell 形式
+RUN <命令>
+# exec 形式
+RUN ["<可执行文件>", "<参数1>", ...]
+
+# shell 形式案例
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+# 更新包列表、安装 curl、清理缓存。
+# 使用 && 连接多条命令，减少镜像层数（每条 RUN 指令生成一层）。
+
+# exec形式案例
+RUN ["pip", "install", "-r", "requirements.txt"]
+# 直接调用 pip，不经过 shell，更安全（避免字符串转义问题）。
+```
+
+| 形式          | 说明                                                                                                                                                            |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `shell` 形式​ | 通过 `/bin/sh -c` 执行命令，支持管道、变量替换等 shell 特性。                                                                                                   |
+| `exec` 形式​  | 直接运行指定的可执行文件，不经过 `shell`，参数需分开写成 JSON 数组。适合没有 shell 的基础镜像（如 scratch、alpine 也有 /bin/sh，但某些精简镜像可能没有）。 |
+
+
+## 2.6、`ENV`-设置环境变量
 
 ```shell
 ENV <键>=<值> [<键2>=<值2> ... ]
@@ -110,7 +143,7 @@ ENV SRC_FILE=config.prod.json
 COPY $SRC_FILE /app/config.json
 ```
 
-## 2.6、`EXPOSE`-声明端口
+## 2.7、`EXPOSE`-声明端口
 
 ```shell
 EXPOSE <端口>[/<协议>] [<端口2>[/<协议>] ...]
@@ -128,7 +161,7 @@ EXPOSE 80/tcp 443/udp
 
 > 这只是文档性质，实际端口映射仍需要在 `docker run` 时使用 `-p` 或 `-P` 参数
 
-## 2.7、`CMD`-容器启动时的默认命令
+## 2.8、`CMD`-容器启动时的默认命令
 
 ```shell
 # # shell 形式
@@ -153,7 +186,7 @@ CMD ["node", "app.js"]
 - 如果在 `docker run` 后面附加了其他命令（如 `docker run myimage bash`），则 `CMD` 会被覆盖，改为运行 `bash`。
 - 一个 `Dockerfile` 中只能有一个 `CMD`，如果有多个则只有最后一个生效;
 
-## 2.8、`ENTRYPOINT`-容器入口点
+## 2.9、`ENTRYPOINT`-容器入口点
 
 ```shell
 # shell 形式
@@ -174,7 +207,7 @@ CMD ["-c", "print('Hello')"]
 - 通常 `ENTRYPOINT` 固定程序的入口，`CMD` 提供默认参数。
 - 尽量使用 `exec` 形式的 `ENTRYPOINT`，以便正确处理信号。
 
-## 2.9、`ARG`-构建时的变量
+## 2.10、`ARG`-构建时的变量
 
 ```shell
 ARG <变量名>[=<默认值>]
