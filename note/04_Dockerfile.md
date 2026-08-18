@@ -375,4 +375,115 @@ hewenyu@hewenyu:~/docker$ docker run my-hello-world:1.0
 Hello, World from C!
 ```
 
+## 3.2、构建 `ubuntu` 系统
 
+从镜像中心拉取来的 `ubuntu` 镜像中是没有`vim`、`ifconfig`、`wget`等常用命令的，这里要构建一个自己的 `ubuntu` 镜像，使这些命令都可以使用。 
+
+```shell
+hewenyu@hewenyu:~/docker/my_ubuntu$ docker images
+                                                                                                    i Info →   U  In Use
+IMAGE              ID             DISK USAGE   CONTENT SIZE   EXTRA
+ubuntu:22.04       2edbbc5dc405        119MB         31.7MB
+# 运行 docker hub 下载的 ubuntu 镜像
+hewenyu@hewenyu:~/docker/my_ubuntu$ docker run --name u1 -it ubuntu:22.04 /bin/bash
+root@e2d73f879389:/# ls
+bin  boot  dev  etc  home  lib  lib32  lib64  libx32  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+# 不支持 ifconfig 命令
+root@e2d73f879389:/# ifconfig
+bash: ifconfig: command not found
+# 不支持 vim 命令
+root@e2d73f879389:/# vim a.txt
+bash: vim: command not found
+root@e2d73f879389:/#
+```
+
+### 3.2.1、创建 `Dockerfile`
+
+在宿主机任意目录创建一个文件，并命名为 `Dockerfile`。
+
+```shell
+hewenyu@hewenyu:~/docker/my_ubuntu$ pwd
+/home/hewenyu/docker/my_ubuntu
+hewenyu@hewenyu:~/docker/my_ubuntu$ touch Dockerfile
+hewenyu@hewenyu:~/docker/my_ubuntu$ ls
+Dockerfile
+hewenyu@hewenyu:~/docker/my_ubuntu$
+```
+
+编写 `Dockerfile` 文件
+
+```dockerfile
+FROM ubuntu:22.04
+LABEL maintainer="hwy hwy@qq.com" version="1.0" description="this is custom ubuntu image"
+
+ENV WORKPATH /usr/local/hwy
+WORKDIR $WORKPATH
+
+RUN apt-get update && apt-get install -y vim net-tools
+CMD /bin/bash
+```
+
+### 3.2.2、构建镜像
+
+```shell
+hewenyu@hewenyu:~/docker/my_ubuntu$ ls
+Dockerfile
+# 构建镜像
+hewenyu@hewenyu:~/docker/my_ubuntu$ docker build -t my_ubuntu:22.04.1 .
+[+] Building 313.8s (7/7) FINISHED                                                                       docker:default
+ => [internal] load build definition from Dockerfile                                                               0.0s
+ => => transferring dockerfile: 264B                                                                               0.0s
+ => [internal] load metadata for docker.io/library/ubuntu:22.04                                                    0.2s
+ => [internal] load .dockerignore                                                                                  0.1s
+ => => transferring context: 2B                                                                                    0.0s
+ => [1/3] FROM docker.io/library/ubuntu:22.04@sha256:2edbbc5dc405e9612ba3584ce95480277e3eb374407b5505fe26f17df77c  0.1s
+ => => resolve docker.io/library/ubuntu:22.04@sha256:2edbbc5dc405e9612ba3584ce95480277e3eb374407b5505fe26f17df77c  0.1s
+ => [2/3] WORKDIR /usr/local/hwy                                                                                   0.1s
+ => [3/3] RUN apt-get update && apt-get install -y vim net-tools                                                 302.5s
+ => exporting to image                                                                                            10.5s
+ => => exporting layers                                                                                            8.2s
+ => => exporting manifest sha256:06a9559961cedbce421ef6f224b6a945b3654ed52cd58de56cd24fcf5cdb6da9                  0.0s
+ => => exporting config sha256:a5348f129395ce498d77bd7cdd41d01503fdf0d953c2d581bffe33b3f1112455                    0.0s
+ => => exporting attestation manifest sha256:7e0a91680b9376e1310a601809348e428eafee12c19ef9a408e3bca43637c529      0.1s
+ => => exporting manifest list sha256:cbf9f7db17f7dfeebcddefcb111671bd050ff13cb08f012c1f54d44786f87c59             0.0s
+ => => naming to docker.io/library/my_ubuntu:22.04.1                                                               0.0s
+ => => unpacking to docker.io/library/my_ubuntu:22.04.1                                                            2.0s
+
+ 2 warnings found (use docker --debug to expand):
+ - LegacyKeyValueFormat: "ENV key=value" should be used instead of legacy "ENV key value" format (line 4)
+ - JSONArgsRecommended: JSON arguments recommended for CMD to prevent unintended behavior related to OS signals (line 8)
+hewenyu@hewenyu:~/docker/my_ubuntu$
+
+# 查看新构建的镜像
+hewenyu@hewenyu:~/docker/my_ubuntu$ docker images my_ubuntu:22.04.1
+                                                                                                    i Info →   U  In Use
+IMAGE               ID             DISK USAGE   CONTENT SIZE   EXTRA
+my_ubuntu:22.04.1   cbf9f7db17f7        337MB          103MB    U
+```
+
+### 3.2.3、运行镜像
+
+```shell
+hewenyu@hewenyu:~/docker/my_ubuntu$ docker run --name my_u1 -it my_ubuntu:22.04.1 /bin/bash
+# ifconfig 命令执行正常
+root@8649cb604d16:/usr/local/hwy# ifconfig
+eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 172.17.0.2  netmask 255.255.0.0  broadcast 172.17.255.255
+        ether 12:48:67:c8:ad:77  txqueuelen 0  (Ethernet)
+        RX packets 9  bytes 806 (806.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 3  bytes 126 (126.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+        inet 127.0.0.1  netmask 255.0.0.0
+        inet6 ::1  prefixlen 128  scopeid 0x10<host>
+        loop  txqueuelen 1000  (Local Loopback)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 0  bytes 0 (0.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+# vim 命令执行正常
+root@8649cb604d16:/usr/local/hwy# vim a.txt
+root@8649cb604d16:/usr/local/hwy#
+```
