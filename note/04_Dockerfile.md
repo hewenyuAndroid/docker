@@ -92,11 +92,18 @@ RUN ["<可执行文件>", "<参数1>", ...]
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 # 更新包列表、安装 curl、清理缓存。
 # 使用 && 连接多条命令，减少镜像层数（每条 RUN 指令生成一层）。
+# 下面的三条指令会生成三个镜像
+RUN apt-get update
+RUN apt-get install -y curl
+RUN rm -rf /var/lib/apt/lists/*
 
 # exec形式案例
 RUN ["pip", "install", "-r", "requirements.txt"]
 # 直接调用 pip，不经过 shell，更安全（避免字符串转义问题）。
 ```
+
+每条 `RUN` 指令都会生成一个镜像层，使用 `shell` 模式时，可以将多条指令连接成一条 `RUN` 指令，这样只会产生一层镜像
+
 
 ### 2.5.1、`shell` 模式与 `exec` 模式
 
