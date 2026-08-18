@@ -98,11 +98,52 @@ RUN ["pip", "install", "-r", "requirements.txt"]
 # 直接调用 pip，不经过 shell，更安全（避免字符串转义问题）。
 ```
 
-| 形式          | 说明                                                                                                                                                            |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `shell` 形式​ | 通过 `/bin/sh -c` 执行命令，支持管道、变量替换等 shell 特性。                                                                                                   |
-| `exec` 形式​  | 直接运行指定的可执行文件，不经过 `shell`，参数需分开写成 JSON 数组。适合没有 shell 的基础镜像（如 scratch、alpine 也有 /bin/sh，但某些精简镜像可能没有）。 |
+### 2.5.1、`shell` 模式与 `exec` 模式
 
+- `shell` 模式：命令交给 `/bin/sh -c` 去执行，能用 `shell` 的所有功能。
+- `exec` 模式：`Docker` 直接调用程序，不经过 `shell`，参数必须拆成 `JSON` 数组。
+
+| 差异点                      | `shell` 模式                    | `exec` 模式               |
+| --------------------------- | ------------------------------- | ------------------------- |
+| 写法​                       | `CMD node app.js`               | `CMD ["node", "app.js"]`  |
+| 是否经过 `shell`​           | ✅ 是（`/bin/sh -c`）           | ❌ 否（直接 `exec`）      |
+| `$VAR` 变量替换​            | ✅ 会展开                       | ❌ 不展开（原样当字符串） |
+| 支持 `&&、管道、>​`         | ✅ 支持                         | ❌ 不支持                 |
+| `PID 1` 进程​               | `shell` 进程                    | 你的程序​                 |
+| `docker stop` 信号转发​     | ⚠️ `shell` 可能不转发，程序强杀 | ✅ 信号直达程序，优雅退出 |
+| `RUN` 合并命令减层数​       | ✅ 可以 `&&` 连写               | ❌ 每条 `RUN` 单独一层    |
+| 无 shell 的镜像（scratch）​ | ❌ 报错                         | ✅ 可用                   |
+
+> 变量展开规则
+
+```shell
+ENV NAME=app
+CMD ["echo", "$NAME"]        # 输出字面量 $NAME，不是 app
+CMD echo "$NAME"            # 输出 app
+```
+
+> 容器停不掉/强制杀死（信号处理）
+
+- `shell` 模式：`PID 1` 是 `sh`，`docker stop` 发 `SIGTERM` 给 `sh`，`sh` 默认不传给子进程 → 程序不退出 → 10 秒后强制 `SIGKILL`。
+- `exec` 模式：`PID 1` 是 `node/python/java` → 直接收到 `SIGTERM` → 程序可以优雅关闭。
+
+> 镜像莫名其妙变大（层数问题）
+
+```shell
+# shell 模式：1 层，装完就清缓存，镜像小
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# exec 模式：3 层，缓存清不掉，镜像大
+RUN ["apt-get", "update"]
+RUN ["apt-get", "install", "-y", "curl"]
+RUN ["rm", "-rf", "/var/lib/apt/lists/*"]  # 删了也只在最上层标记删除，下层还在
+```
+
+> 使用建议:
+
+- `RUN` 用 `shell`（要 `&&` 合并命令、清缓存、用变量）
+- `CMD/ENTRYPOINT` 用 `exec`（要信号直达、优雅停止）
+- `exec` 里要用变量 → 让程序自己读 ENV，别在命令里传 $VAR
 
 ## 2.6、`ENV`-设置环境变量
 
