@@ -1,0 +1,7 @@
+server:
+  # 注意这里将端口修改成 8081
+  port: 8081
+
+logging:
+  pattern:
+    console: level-%-5level - %msg%n
