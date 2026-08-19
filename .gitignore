@@ -1,0 +1,77 @@
+### ================================
+### Maven / Spring Boot 构建产物
+### ================================
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+release.properties
+dependency-reduced-pom.xml
+.mvn/wrapper/maven-wrapper.jar
+
+### ================================
+### IntelliJ IDEA（你用的 IDE）
+### ================================
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+### ================================
+### Eclipse（万一以后换 IDE 或有人用）
+### ================================
+.settings/
+.classpath
+.project
+bin/
+
+### ================================
+### VS Code
+### ================================
+.vscode/
+
+### ================================
+### 操作系统垃圾文件
+### ================================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux / WSL
+*~
+.fuse_hidden*
+
+### ================================
+### 日志
+### ================================
+*.log
+logs/
+
+### ================================
+### 本地配置（不提交到仓库）
+### ================================
+# 每个开发者的本地配置不同，各自在本地创建即可
+application-local.yml
+application-local.yaml
+application-local.properties
+
+# 环境变量文件（含密码/Token，绝对不能提交）
+.env
+.env.local
+.env.*.local
+
+### ================================
+### 编译产物（兜底）
+### ================================
+*.class
+*.jar
+*.war
+*.ear
