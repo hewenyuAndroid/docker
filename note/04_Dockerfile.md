@@ -234,6 +234,122 @@ CMD ["node", "app.js"]
 - 如果在 `docker run` 后面附加了其他命令（如 `docker run myimage bash`），则 `CMD` 会被覆盖，改为运行 `bash`。
 - 一个 `Dockerfile` 中只能有一个 `CMD`，如果有多个则只有最后一个生效;
 
+
+### 2.8.1、案例演示,`CMD shell` 模式
+
+> step1: 在任意目录下创建 `Dockerfile` 文件，编写如下内容
+
+```dockerfile
+FROM ubuntu:22.04
+LABEL maintainer="hwy hwy@qq.com" version="1.0" description="this is custom ubuntu image"
+# 容器启动后执行 echo hello my_ubuntu 命令
+CMD echo hello my_ubuntu
+```
+
+> step2: 构建自定义镜像
+
+```shell
+# 构建镜像
+hewenyu@hewenyu:~/docker/test1$ docker build -t my_ubuntu:22.04.3 .
+[+] Building 1.3s (5/5) FINISHED                                                                         docker:default
+ => [internal] load build definition from Dockerfile                                                               0.0s
+ => => transferring dockerfile: 173B                                                                               0.0s
+ => [internal] load metadata for docker.io/library/ubuntu:22.04                                                    0.5s
+ => [internal] load .dockerignore                                                                                  0.0s
+ => => transferring context: 2B                                                                                    0.0s
+ => CACHED [1/1] FROM docker.io/library/ubuntu:22.04@sha256:2edbbc5dc405e9612ba3584ce95480277e3eb374407b5505fe26f  0.1s
+ => => resolve docker.io/library/ubuntu:22.04@sha256:2edbbc5dc405e9612ba3584ce95480277e3eb374407b5505fe26f17df77c  0.0s
+ => exporting to image                                                                                             0.4s
+ => => exporting layers                                                                                            0.0s
+ => => exporting manifest sha256:6c6aa5ba9c265b63e3afdf6eec5b77a3551f9a5ce72b010235116513a4e97d08                  0.1s
+ => => exporting config sha256:5dc98e46e6633d61c7da5f6d9687c50d995e954392c9a39a9543fd3ccbe475c6                    0.0s
+ => => exporting attestation manifest sha256:dd22b723259e042033f3f43bd36cc57d1deb70ee52a93ff4da9622639a57c82c      0.1s
+ => => exporting manifest list sha256:0684e81d31b7ca705ca7af4b22dacf8f5ff4e4233dbd14306f50b71a477cb3cd             0.1s
+ => => naming to docker.io/library/my_ubuntu:22.04.3                                                               0.0s
+ => => unpacking to docker.io/library/my_ubuntu:22.04.3                                                            0.0s
+
+ 1 warning found (use docker --debug to expand):
+ - JSONArgsRecommended: JSON arguments recommended for CMD to prevent unintended behavior related to OS signals (line 4)
+# 构建完成，查看本地镜像
+hewenyu@hewenyu:~/docker/test1$ docker images
+                                                                                                    i Info →   U  In Use
+IMAGE               ID             DISK USAGE   CONTENT SIZE   EXTRA
+my_ubuntu:22.04.3   0684e81d31b7        117MB         29.7MB
+hewenyu@hewenyu:~/docker/test1$
+```
+
+> step3: 运行镜像
+
+```shell
+# 容器运行后，会执行 echo 命令
+hewenyu@hewenyu:~/docker/test1$ docker run my_ubuntu:22.04.3
+hello my_ubuntu
+```
+
+> step4: 运行镜像，并添加 shell 命令
+
+```shell
+# docker run 命令中添加 shell 命令后，CMD 命令便不在执行了
+hewenyu@hewenyu:~/docker/test1$ docker run my_ubuntu:22.04.3 echo hello from param
+hello from param
+```
+
+### 2.8.2、案例演示，`CMD exec` 模式
+
+> step1: 在任意目录下创建 `Dockerfile` 文件，编写如下内容
+
+```dockerfile
+FROM ubuntu:22.04
+LABEL maintainer="hwy hwy@qq.com" version="1.0" description="this is custom ubuntu image"
+# 容器启动后执行 echo hello my_ubuntu 命令
+CMD ["echo", "hello my_ubuntu, exec"]
+```
+
+> step2: 构建自定义镜像
+
+```shell
+# 构建镜像
+hewenyu@hewenyu:~/docker/test1$ docker build -t my_ubuntu:22.04.4 .
+[+] Building 1.1s (5/5) FINISHED                                                                         docker:default
+ => [internal] load build definition from Dockerfile                                                               0.0s
+ => => transferring dockerfile: 186B                                                                               0.0s
+ => [internal] load metadata for docker.io/library/ubuntu:22.04                                                    0.3s
+ => [internal] load .dockerignore                                                                                  0.0s
+ => => transferring context: 2B                                                                                    0.0s
+ => CACHED [1/1] FROM docker.io/library/ubuntu:22.04@sha256:2edbbc5dc405e9612ba3584ce95480277e3eb374407b5505fe26f  0.1s
+ => => resolve docker.io/library/ubuntu:22.04@sha256:2edbbc5dc405e9612ba3584ce95480277e3eb374407b5505fe26f17df77c  0.1s
+ => exporting to image                                                                                             0.3s
+ => => exporting layers                                                                                            0.0s
+ => => exporting manifest sha256:088a2e606c1b7f2066f985675dc3354a8c34629e95147b665b795318c41c82e5                  0.0s
+ => => exporting config sha256:cbd6eee93d619a171b8b134a54adfd5fe0b1bfed3a679ad7529d2eb05c828f07                    0.0s
+ => => exporting attestation manifest sha256:e6c03b3bc0d1eea7f91552dfe2babfdd020dc6e9adaec3f5bedff9b19fdf9770      0.1s
+ => => exporting manifest list sha256:15a1049b327b9a64fef5473a455adc2484ff52ed2e41fd0396bf4a41713e9801             0.1s
+ => => naming to docker.io/library/my_ubuntu:22.04.4                                                               0.0s
+ => => unpacking to docker.io/library/my_ubuntu:22.04.4                                                            0.0s
+# 查看镜像
+hewenyu@hewenyu:~/docker/test1$ docker images
+                                                                                                    i Info →   U  In Use
+IMAGE               ID             DISK USAGE   CONTENT SIZE   EXTRA
+my_ubuntu:22.04.3   0684e81d31b7        117MB         29.7MB    U
+my_ubuntu:22.04.4   15a1049b327b        117MB         29.7MB
+hewenyu@hewenyu:~/docker/test1$
+```
+
+> step3: 运行镜像
+
+```shell
+hewenyu@hewenyu:~/docker/test1$ docker run my_ubuntu:22.04.4
+hello my_ubuntu, exec
+```
+
+> step4: 运行镜像，并添加 shell 命令
+
+```shell
+# 可以看到 CMD 命令不再执行
+hewenyu@hewenyu:~/docker/test1$ docker run my_ubuntu:22.04.4 echo hello from param
+hello from param
+```
+
 ## 2.9、`ENTRYPOINT`-容器入口点
 
 ```shell
