@@ -390,7 +390,119 @@ RUN echo "Building version $VERSION"
 - `ARG` 只在构建过程中有效，容器运行时无法获取（除非再次用 `ENV` 赋值）。
 - `ENV` 在容器构建时和运行时都有效;
 
+### 2.9.1、案例演示，`shell`模式
 
+> step1: 在任意目录下创建 `Dockerfile` 文件，编写如下内容
+
+```dockerfile
+FROM ubuntu:22.04
+LABEL maintainer="hwy hwy@qq.com" version="1.0" description="this is custom ubuntu image"
+# 容器启动后执行 echo 命令
+ENTRYPOINT echo hello my_ubuntu,entrypoint shell
+```
+
+> step2: 构建自定义镜像
+
+```shell
+hewenyu@hewenyu:~/docker/test1$ docker build -t my_ubuntu:22.04.5 .
+[+] Building -0.1s (5/5) FINISHED                                                                        docker:default
+ => [internal] load build definition from Dockerfile                                                               0.0s
+ => => transferring dockerfile: 197B                                                                               0.0s
+ => [internal] load metadata for docker.io/library/ubuntu:22.04                                                    0.2s
+ => [internal] load .dockerignore                                                                                  0.0s
+ => => transferring context: 2B                                                                                    0.0s
+ => CACHED [1/1] FROM docker.io/library/ubuntu:22.04@sha256:2edbbc5dc405e9612ba3584ce95480277e3eb374407b5505fe26f  0.1s
+ => => resolve docker.io/library/ubuntu:22.04@sha256:2edbbc5dc405e9612ba3584ce95480277e3eb374407b5505fe26f17df77c  0.1s
+ => exporting to image                                                                                             0.0s
+ => => exporting layers                                                                                            0.0s
+ => => exporting manifest sha256:df7efe088ee6786de724b789fac7f90c64d3d92b3f3e5bc383f37f8aaf823b55                  0.0s
+ => => exporting config sha256:5c86e247dd95582611b8ce235225f685d6079246e224843053083789049b1095                    0.0s
+ => => exporting attestation manifest sha256:474242acbd1a93eca1f2ab2e0f20983912eb25dbe3789f386458561b2dc290ef      0.1s
+ => => exporting manifest list sha256:52dfa873f92aa078a4bd7a4ca6c023d52bdf5f612c6ebe560557d66e11aec996             0.0s
+ => => naming to docker.io/library/my_ubuntu:22.04.5                                                               0.0s
+ => => unpacking to docker.io/library/my_ubuntu:22.04.5                                                            0.0s
+
+ 1 warning found (use docker --debug to expand):
+ - JSONArgsRecommended: JSON arguments recommended for ENTRYPOINT to prevent unintended behavior related to OS signals (line 4)
+hewenyu@hewenyu:~/docker/test1$ docker images my_ubuntu
+                                                                                                    i Info →   U  In Use
+IMAGE               ID             DISK USAGE   CONTENT SIZE   EXTRA
+my_ubuntu:22.04.3   0684e81d31b7        117MB         29.7MB    U
+my_ubuntu:22.04.4   15a1049b327b        117MB         29.7MB    U
+my_ubuntu:22.04.5   52dfa873f92a        117MB         29.7MB
+hewenyu@hewenyu:~/docker/test1$
+```
+
+> step3: 运行镜像
+
+```shell
+hewenyu@hewenyu:~/docker/test1$ docker run my_ubuntu:22.04.5
+hello my_ubuntu,entrypoint shell
+```
+
+> step4: 运行镜像，添加 shell 命令( shell 不生效)
+
+```shell
+# 可以看到 docker run 命令后面的 shell 命令不生效，运行也没报错
+hewenyu@hewenyu:~/docker/test1$ docker run my_ubuntu:22.04.5 echo hello param
+hello my_ubuntu,entrypoint shell
+```
+
+### 2.9.2、案例演示，`exec` 模式
+
+> step1: 在任意目录下创建 `Dockerfile` 文件，编写如下内容
+
+```dockerfile
+FROM ubuntu:22.04
+LABEL maintainer="hwy hwy@qq.com" version="1.0" description="this is custom ubuntu image"
+# 容器启动后执行 echo 命令
+ENTRYPOINT ["echo", "hello my_ubuntu,entrypoint exec"]
+```
+
+> step2: 构建镜像
+
+```shell
+hewenyu@hewenyu:~/docker/test1$ docker build -t my_ubuntu:22.04.6 .
+[+] Building 1.0s (5/5) FINISHED                                                                         docker:default
+ => [internal] load build definition from Dockerfile                                                               0.0s
+ => => transferring dockerfile: 203B                                                                               0.0s
+ => [internal] load metadata for docker.io/library/ubuntu:22.04                                                    0.2s
+ => [internal] load .dockerignore                                                                                  0.0s
+ => => transferring context: 2B                                                                                    0.0s
+ => CACHED [1/1] FROM docker.io/library/ubuntu:22.04@sha256:2edbbc5dc405e9612ba3584ce95480277e3eb374407b5505fe26f  0.1s
+ => => resolve docker.io/library/ubuntu:22.04@sha256:2edbbc5dc405e9612ba3584ce95480277e3eb374407b5505fe26f17df77c  0.1s
+ => exporting to image                                                                                             0.4s
+ => => exporting layers                                                                                            0.0s
+ => => exporting manifest sha256:c2cae95288d2b5887f9b2906381ebeb1fd0e4cfb1a202f8d4bd0fcb9f0304d3b                  0.0s
+ => => exporting config sha256:dc7f49dbd36acb38e1c618d3e560baa3548e8f6767cce34555a265e82b36f6d1                    0.1s
+ => => exporting attestation manifest sha256:e69590e6caa09d6f9d5f572e651ed0683311f06ed6dad4eb4d2c39cba4d2c129      0.1s
+ => => exporting manifest list sha256:4757b26c2f985856ae17ef5bc4a5b9082f58fd92e95ac065530f336ef8474a06             0.0s
+ => => naming to docker.io/library/my_ubuntu:22.04.6                                                               0.0s
+ => => unpacking to docker.io/library/my_ubuntu:22.04.6                                                            0.0s
+hewenyu@hewenyu:~/docker/test1$ docker images my_ubuntu
+                                                                                                    i Info →   U  In Use
+IMAGE               ID             DISK USAGE   CONTENT SIZE   EXTRA
+my_ubuntu:22.04.3   0684e81d31b7        117MB         29.7MB    U
+my_ubuntu:22.04.4   15a1049b327b        117MB         29.7MB    U
+my_ubuntu:22.04.5   52dfa873f92a        117MB         29.7MB    U
+my_ubuntu:22.04.6   4757b26c2f98        117MB         29.7MB
+hewenyu@hewenyu:~/docker/test1$
+```
+
+> step3: 运行镜像
+
+```shell
+hewenyu@hewenyu:~/docker/test1$ docker run my_ubuntu:22.04.6
+hello my_ubuntu,entrypoint exec
+```
+
+> step4: 运行镜像，带 shell 参数 (shell命令被当作参数输出)
+
+```shell
+# 可以看到，追加的，shell 命令被当作 ENTRYPOINT 指令的参数被输出了
+hewenyu@hewenyu:~/docker/test1$ docker run my_ubuntu:22.04.6 echo hell param
+hello my_ubuntu,entrypoint exec echo hell param
+```
 
 
 # 3、构建镜像
